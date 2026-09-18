@@ -43,13 +43,7 @@ smart contract for ProofShield, deployed to the Midnight Preprod/Preview network
 - Contract compiled with `compact compile` (proof keys generated)
 - Test suite verifying the core privacy model
 - Deployment to Midnight Preprod or Preview network
-
-**What Level 1 does NOT include:**
-- A frontend or UI (Level 2)
-- Real GitHub/HTB/TryHackMe integrations (Level 4)
-- A recruiter dashboard (Level 4)
-- AI-powered verification (out of scope)
-- Mainnet deployment (Level 6)
+- **Interactive React UI (`ui/`)**: A complete studio connecting the platform adapters, Compact ZK circuits, live proof server simulation, on-chain ledger state, and verifier portal.
 
 ---
 
@@ -130,6 +124,25 @@ Or start it via Docker directly:
 ```bash
 docker run -d -p 6300:6300 midnightntwrk/proof-server:8.1.0
 ```
+
+---
+
+## Launch Interactive Web UI
+
+ProofShield includes a React application with a ZK Proof Studio and Verifier Portal.
+
+```bash
+# From the project root:
+yarn ui:dev
+# or:
+cd ui && npm run dev
+```
+
+Open **`http://localhost:5173`** in your browser to interact with:
+- **ZK Proof Studio**: Adjust thresholds, simulate platform adapters (GitHub, Hack The Box, TryHackMe), and trigger cryptographic ZK proof generation.
+- **Verifier Portal**: Query public on-chain claims without leaking candidate identity or repository history.
+- **Circuit & Privacy Inspector**: Live breakdown of `proofshield.compact` public state vs private witnesses.
+- **Level 1 Deliverables**: Live test suite status and submission checklist.
 
 ---
 
