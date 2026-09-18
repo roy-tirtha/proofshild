@@ -14,7 +14,9 @@
     "test:preview": "MIDNIGHT_NETWORK=preview yarn test",
     "test:preprod": "MIDNIGHT_NETWORK=preprod yarn test",
     "proof:up": "docker compose up -d --wait proof-server",
-    "proof:down": "docker compose stop proof-server"
+    "proof:down": "docker compose stop proof-server",
+    "ui:dev": "npm run dev --prefix ui",
+    "ui:build": "npm run build --prefix ui"
   },
   "dependencies": {
     "@midnight-ntwrk/midnight-js-protocol": "4.1.1",

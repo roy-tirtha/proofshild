@@ -1,5 +1,7 @@
 # Dependencies
 /node_modules
+/ui/node_modules
+/ui/dist
 
 # NOTE: contracts/managed IS committed intentionally for Rise In submission.
 # The managed/ directory contains ZK keys and compiler artifacts needed for
