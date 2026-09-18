@@ -11,9 +11,10 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
+    "jsx": "react-jsx",
     "noEmit": true,
     "outDir": "dist",
     "rootDir": "."
   },
-  "include": ["src/**/*.ts", "contracts/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "contract/**/*.ts"]
 }

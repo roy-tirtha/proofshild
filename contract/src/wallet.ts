@@ -5,6 +5,7 @@ import type {
 } from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import {
   DustSecretKey,
+  LedgerParameters,
   ZswapSecretKeys,
 } from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import type {
@@ -15,6 +16,7 @@ import type {
 import { ttlOneHour } from '@midnight-ntwrk/midnight-js-utils';
 import type { WalletFacade, FacadeState, UnshieldedKeystore } from '@midnight-ntwrk/wallet-sdk';
 import {
+  type DustWalletOptions,
   type EnvironmentConfiguration,
   FluentWalletBuilder,
 } from '@midnight-ntwrk/testkit-js';
@@ -81,7 +83,14 @@ export class MidnightWalletProvider implements MidnightProvider, WalletProvider 
     env: EnvironmentConfiguration,
     secret: WalletSecret,
   ): Promise<MidnightWalletProvider> {
-    const base = FluentWalletBuilder.forEnvironment(env);
+    const dustOptions: DustWalletOptions = {
+      ledgerParams: LedgerParameters.initialParameters(),
+      additionalFeeOverhead: 1_000n,
+      feeBlocksMargin: 5,
+    };
+
+    const base = FluentWalletBuilder.forEnvironment(env)
+      .withDustOptions(dustOptions);
     const builder =
       secret.kind === 'mnemonic'
         ? base.withMnemonic(secret.value)

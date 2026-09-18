@@ -2,7 +2,7 @@
   "version": 3,
   "file": "index.js",
   "sourceRoot": "../../../../",
-  "sources": ["contracts/proofshield.compact"],
+  "sources": ["contract/proofshield.compact"],
   "names": [],
   "mappings": ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;EAAA;;;;;;;;;;MAmDA,AAAA,gBAGC;;;;;cAH+B,gBAAwB;;;;;;;;;;;;;;;;;;yCAAxB,gBAAwB;;;;;;;;;kDAAxB,gBAAwB;;;OAGvD;MAgBD,AAAA,YAGC;;;;;cAH2B,gBAAwB;;;;;;;;;;;;;;;;;;yCAAxB,gBAAwB;;;;;;;;;8CAAxB,gBAAwB;;;OAGnD;;;;;;;;;;GACA;EA1ED;;;;;;;;;;;;;;;;;;;;;;;;;;;;IAoCA;;;;;;;;;yEAAsC;IAItC;;;;;;;;;yEAAkC;;;;;;;GAkCjC;EAvBD,AAAA,mBAGC,4BAH+B,gBAAwB;IACtD;;;;;;;2HAAqB,gBAAc;;yEAA1B;IACT;;;;;;;;;yEAAc;;GACf;EAgBD,AAAA,eAGC,4BAH2B,gBAAwB;UAC5C,QAA6C,GAA3B,gBAAc;;6CAAI;;;;;;;;;;;kHAAS;IACnD;;;;;;;2HAA0B,QAAM;;yEAAlB;;GACf;;;;;;;;;;;;;;;;IArCD;qCAAA;;;;;;;;;;;0GAAsC;KAAA;IAItC;qCAAA;;;;;;;;;;;0GAAkC;KAAA;;;;;;;;;;"
 }

@@ -1,9 +1,8 @@
-# Dependencies
+# Dependencies & Build
 /node_modules
-/ui/node_modules
-/ui/dist
+/dist
 
-# NOTE: contracts/managed IS committed intentionally for Rise In submission.
+# NOTE: contract/managed IS committed intentionally for Rise In submission.
 # The managed/ directory contains ZK keys and compiler artifacts needed for
 # deployment and verification. Do not delete or .gitignore it.
 
