@@ -1,0 +1,24 @@
+# Dependencies
+/node_modules
+
+# Generated contract artifacts (never edit by hand)
+/contracts/managed
+
+# Environment secrets - NEVER commit these
+.env.preview
+.env.preprod
+.env.local
+.env
+
+# Wallet / private state / DB
+/midnight-level-db
+/.midnight-expert
+deployment.json
+
+# Logs
+/logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
