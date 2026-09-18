@@ -126,15 +126,10 @@
   resolved "https://registry.yarnpkg.com/@midnight-ntwrk/dapp-connector-api/-/dapp-connector-api-4.0.1.tgz#4f3a240704d9993e59b93eba6f2f16c047cf4542"
   integrity sha512-IstRo8xfmlJlGgUcAJeRzPUmGCp0/xZR3/bfTOk33MHrzbGmB79r/zYziGavcclo1pkkoBHAodX4vz3xgFxczw==
 
-"@midnight-ntwrk/ledger-v8@8.1.0":
+"@midnight-ntwrk/ledger-v8@8.1.0", "@midnight-ntwrk/ledger-v8@^8.0.3", "@midnight-ntwrk/ledger-v8@^8.1.0":
   version "8.1.0"
   resolved "https://registry.yarnpkg.com/@midnight-ntwrk/ledger-v8/-/ledger-v8-8.1.0.tgz#c42ed442b6c8c79e28ca5fc13a8764f31eab2f73"
   integrity sha512-rwOVP5kBwACpYmmY6+oLeaiM3e5gHscRMjbZUOntOC5QdtqLdpeep6eQW1OngI+sxjjdVoGg2eE16sLf+DAHmQ==
-
-"@midnight-ntwrk/ledger-v8@^8.0.3", "@midnight-ntwrk/ledger-v8@^8.1.0":
-  version "8.1.2"
-  resolved "https://registry.yarnpkg.com/@midnight-ntwrk/ledger-v8/-/ledger-v8-8.1.2.tgz#1cb93e168dc220b073eb22e060e16a692d705541"
-  integrity sha512-H8r5J892bltVtplh1bq947SH/+/jWx07/PaIGSQG8Bd21bObN+sR5eMVTb/RRIRlf2g7MJB4jzgbikMnVZnHqA==
 
 "@midnight-ntwrk/midnight-js-compact@4.1.1":
   version "4.1.1"
@@ -243,15 +238,10 @@
     "@midnight-ntwrk/midnight-js-protocol" "4.1.1"
     "@midnight-ntwrk/wallet-sdk-address-format" "^3.1.0"
 
-"@midnight-ntwrk/onchain-runtime-v3@3.0.0":
+"@midnight-ntwrk/onchain-runtime-v3@3.0.0", "@midnight-ntwrk/onchain-runtime-v3@^3.0.0":
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/@midnight-ntwrk/onchain-runtime-v3/-/onchain-runtime-v3-3.0.0.tgz#6b9ddf0dc09c8040175e5b40433bf0ff79425d72"
   integrity sha512-HbFbUOsvgpEFy1OT0Ni2LMFk4jnMQS1em+H+Mof/B3DpnNKl0Lkx5QiulKOc6pyU4KPEagOqx4fYNyVXFwgZ7g==
-
-"@midnight-ntwrk/onchain-runtime-v3@^3.0.0":
-  version "3.1.1"
-  resolved "https://registry.yarnpkg.com/@midnight-ntwrk/onchain-runtime-v3/-/onchain-runtime-v3-3.1.1.tgz#c246131be13bd689bd8568d1aaf22f579465a457"
-  integrity sha512-3H5soWI8fWrngV/BzFpZMbx/JsyaK0us8MYe+P8ruwR01SdVMZiypWZRmKq2Dmwn0ZurE3mOdyOd+oYPH7VvTA==
 
 "@midnight-ntwrk/platform-js@2.2.4", "@midnight-ntwrk/platform-js@^2.2.4":
   version "2.2.4"
@@ -513,15 +503,10 @@
     "@midnight-ntwrk/wallet-sdk-unshielded-wallet" "^3.1.0"
     "@midnight-ntwrk/wallet-sdk-utilities" "^1.2.0"
 
-"@midnight-ntwrk/zkir-v2@2.1.0":
+"@midnight-ntwrk/zkir-v2@2.1.0", "@midnight-ntwrk/zkir-v2@^2.1.0":
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/@midnight-ntwrk/zkir-v2/-/zkir-v2-2.1.0.tgz#b3c8b9720535d7e62b86c5ff8341a13a46eb5c7e"
   integrity sha512-UDMujjzCt0SA89uqOFWUL4LZTkxVAS8JjvOaYMAgxlSrWfN7m5th1R1qGlpDJuSH39rbWt6WwtuK3k08Mta6LA==
-
-"@midnight-ntwrk/zkir-v2@^2.1.0":
-  version "2.1.1"
-  resolved "https://registry.yarnpkg.com/@midnight-ntwrk/zkir-v2/-/zkir-v2-2.1.1.tgz#972e123ec22057c24355779335e035dc11fc50d6"
-  integrity sha512-U3sh3kM8bj3BPqWov5o6ewLcq6SJ/tscJD5wATG6LVzqlKWUVudeb7QzUUHXmzeV8XMGgt97+lol/Gnc101Eqw==
 
 "@msgpackr-extract/msgpackr-extract-darwin-arm64@3.0.4":
   version "3.0.4"
