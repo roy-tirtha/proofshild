@@ -1,8 +1,9 @@
 # Dependencies
 /node_modules
 
-# Generated contract artifacts (never edit by hand)
-/contracts/managed
+# NOTE: contracts/managed IS committed intentionally for Rise In submission.
+# The managed/ directory contains ZK keys and compiler artifacts needed for
+# deployment and verification. Do not delete or .gitignore it.
 
 # Environment secrets - NEVER commit these
 .env.preview
