@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Authentication &amp; Access — Intelligence Designed To Evolve</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- OnlineWebFonts: BubbledotICG-FinePos -->
+  <link href="https://db.onlinewebfonts.com/c/8cb707a9b8a73f8a7403336b861c3074?family=BubbledotICG-FinePos" rel="stylesheet" />
+
+  <!-- Font Awesome 6.5.2 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body.subpage {
+      overflow-y: auto;
+      overflow-x: hidden;
+      min-height: 100vh;
+      background: #000000;
+    }
+    .auth-container {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: clamp(20px, 3vh, 36px) 16px 80px;
+      position: relative;
+      z-index: 1;
+    }
+    .auth-card {
+      background: #111113;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 24px;
+      padding: clamp(24px, 4vw, 36px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      transition: border-color 0.25s ease;
+    }
+    .auth-card:hover {
+      border-color: rgba(255, 255, 255, 0.22);
+    }
+    .auth-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 11.5px;
+      color: #ffffff;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+    .auth-title {
+      font-family: var(--font-display);
+      font-size: clamp(24px, 3.5vw, 32px);
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 8px;
+      color: #ffffff;
+    }
+    .auth-subtitle {
+      font-size: 13.5px;
+      color: #8e8e8e;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+    .auth-tabs {
+      display: flex;
+      background: #09090b;
+      border-radius: 999px;
+      padding: 4px;
+      margin-bottom: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .auth-tab {
+      flex: 1;
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: none;
+      background: transparent;
+      color: #8e8e8e;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      text-align: center;
+    }
+    .auth-tab.active {
+      background: #ffffff;
+      color: #000000;
+      font-weight: 600;
+    }
+    .google-btn {
+      width: 100%;
+      background: #ffffff;
+      color: #000000;
+      border: none;
+      border-radius: 999px;
+      padding: 13px 20px;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .google-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 26px rgba(255, 255, 255, 0.45);
+    }
+    .google-btn:active {
+      transform: translateY(0);
+    }
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 24px 0;
+      color: #555555;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .divider::before, .divider::after {
+      content: "";
+      flex: 1;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .divider span {
+      padding: 0 12px;
+    }
+    .form-group {
+      margin-bottom: 18px;
+    }
+    .form-label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: #cbd5e1;
+      margin-bottom: 7px;
+    }
+    .form-input {
+      width: 100%;
+      background: #09090b;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-family: var(--font-sans);
+      font-size: 13.5px;
+      color: #ffffff;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-input:focus {
+      border-color: #ffffff;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3);
+    }
+    .form-input::placeholder {
+      color: #52525b;
+    }
+    .submit-btn {
+      width: 100%;
+      background: #ffffff;
+      color: #000000;
+      border: none;
+      border-radius: 999px;
+      padding: 13px 20px;
+      font-family: var(--font-sans);
+      font-size: 14.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin-top: 8px;
+    }
+    .submit-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 0 26px rgba(255, 255, 255, 0.45);
+    }
+    .submit-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .alert-box {
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 12.5px;
+      margin-bottom: 18px;
+      display: none;
+      line-height: 1.5;
+    }
+    .alert-box.error {
+      display: block;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+    }
+    .alert-box.success {
+      display: block;
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #86efac;
+    }
+    .alert-box.info {
+      display: block;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #93c5fd;
+    }
+    .session-panel {
+      display: none;
+      background: #09090b;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 20px;
+      padding: 24px;
+      text-align: center;
+    }
+    .session-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: #27272a;
+      border: 2px solid #ffffff;
+      margin: 0 auto 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: #ffffff;
+    }
+    .atlas-status-badge {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #09090b;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 10px 14px;
+      margin-top: 24px;
+      font-size: 11.5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: #a1a1aa;
+    }
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+    }
+    .status-dot.green {
+      background: #4ade80;
+      box-shadow: 0 0 8px #4ade80;
+    }
+    .status-dot.amber {
+      background: #fbbf24;
+      box-shadow: 0 0 8px #fbbf24;
+    }
+  </style>
+</head>
+<body class="subpage">
+  <!-- Full-bleed background video -->
+  <div class="bg">
+    <video class="bg-video" autoplay muted loop playsinline>
+      <source
+        src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260809_012548_ef22562c-c0ae-4816-ad9d-f8922af4e6a7.mp4"
+        type="video/mp4"
+      />
+    </video>
+  </div>
+
+  <div class="auth-container">
+    <!-- Header -->
+    <header class="site-header" style="margin-bottom: clamp(24px, 4vh, 48px);">
+      <!-- Circular Logo -->
+      <a href="index.html" class="logo-btn" aria-label="Home">
+        <img src="assets/logo.webp" alt="" width="52" height="52" />
+      </a>
+
+      <!-- Desktop Nav Pill -->
+      <nav class="nav-pill" aria-label="Main Navigation">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="product.html" class="nav-link">Product</a>
+        <a href="case-studies.html" class="nav-link">Case Studies</a>
+        <a href="contact.html" class="nav-link">Contact</a>
+      </nav>
+
+      <!-- Sign In indicator -->
+      <a href="auth.html" class="sign-in-btn active" style="background: #ffffff; color: #000000; font-weight: 600;">
+        <i class="fa-solid fa-user-shield" style="margin-right: 4px;"></i> Auth
+      </a>
+
+      <!-- Mobile Hamburger Button -->
+      <button class="mobile-burger" aria-label="Toggle Menu" aria-expanded="false">
+        <span class="burger-bar"></span>
+        <span class="burger-bar"></span>
+        <span class="burger-bar"></span>
+      </button>
+    </header>
+
+    <!-- Mobile Menu Overlay & Sheet -->
+    <div class="mobile-overlay"></div>
+    <nav class="mobile-sheet" aria-label="Mobile Navigation">
+      <a href="index.html" class="mobile-nav-link">Home</a>
+      <a href="product.html" class="mobile-nav-link">Product</a>
+      <a href="case-studies.html" class="mobile-nav-link">Case Studies</a>
+      <a href="contact.html" class="mobile-nav-link">Contact</a>
+      <a href="studio.html" class="mobile-sign-in">Launch Studio</a>
+    </nav>
+
+    <!-- Auth Card -->
+    <div class="auth-card" id="auth-card">
+      <div class="auth-badge">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>Better Auth • MongoDB Atlas</span>
+      </div>
+
+      <!-- Logged-Out View -->
+      <div id="logged-out-view">
+        <h1 class="auth-title" id="auth-heading">Sign in to ProofShield</h1>
+        <p class="auth-subtitle" id="auth-subheading">
+          Authenticate using Google OAuth or register a new user saved directly to MongoDB Atlas.
+        </p>
+
+        <!-- Alert box for errors or success -->
+        <div class="alert-box" id="auth-alert"></div>
+
+        <!-- Google Sign-In Button -->
+        <button class="google-btn" id="google-signin-btn">
+          <i class="fa-brands fa-google" style="font-size: 16px;"></i>
+          <span>Continue with Google</span>
+        </button>
+
+        <div class="divider">
+          <span>OR CONTINUE WITH EMAIL</span>
+        </div>
+
+        <!-- Mode Tabs -->
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="tab-signin">Sign In</button>
+          <button class="auth-tab" id="tab-register">New User Register</button>
+        </div>
+
+        <!-- Sign In Form -->
+        <form id="signin-form">
+          <div class="form-group">
+            <label class="form-label" for="signin-email">Email Address</label>
+            <input class="form-input" id="signin-email" type="email" placeholder="sarah.lin@enterprise.com" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="signin-password">Password</label>
+            <input class="form-input" id="signin-password" type="password" placeholder="••••••••••••" required />
+          </div>
+          <button type="submit" class="submit-btn" id="signin-submit-btn">
+            <span>Sign In</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </form>
+
+        <!-- Register Form (Hidden by default) -->
+        <form id="register-form" style="display: none;">
+          <div class="form-group">
+            <label class="form-label" for="reg-name">Full Name *</label>
+            <input class="form-input" id="reg-name" type="text" placeholder="Dr. Sarah Lin" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="reg-email">Email Address *</label>
+            <input class="form-input" id="reg-email" type="email" placeholder="sarah.lin@enterprise.com" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="reg-org">Organization / Firm</label>
+            <input class="form-input" id="reg-org" type="text" placeholder="Apex Quantitative Capital" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="reg-password">Password * (min 8 chars)</label>
+            <input class="form-input" id="reg-password" type="password" placeholder="••••••••••••" minlength="8" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="reg-confirm">Confirm Password *</label>
+            <input class="form-input" id="reg-confirm" type="password" placeholder="••••••••••••" minlength="8" required />
+          </div>
+          <button type="submit" class="submit-btn" id="register-submit-btn">
+            <span>Create Account (Save to MongoDB Atlas)</span>
+            <i class="fa-solid fa-user-plus"></i>
+          </button>
+        </form>
+      </div>
+
+      <!-- Logged-In Session View -->
+      <div id="logged-in-view" class="session-panel">
+        <div class="session-avatar" id="user-avatar">
+          <i class="fa-solid fa-user"></i>
+        </div>
+        <h2 style="font-size: 20px; font-weight: 600; color: #ffffff; margin-bottom: 4px;" id="user-name">User Name</h2>
+        <p style="font-size: 13.5px; color: #8e8e8e; margin-bottom: 8px;" id="user-email">user@domain.com</p>
+        <div style="display: inline-block; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: #93c5fd; padding: 4px 12px; border-radius: 999px; font-size: 12px; margin-bottom: 24px;" id="user-org">
+          Independent Researcher
+        </div>
+
+        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+          <a href="studio.html" class="submit-btn" style="flex: 1; text-decoration: none;">
+            <i class="fa-solid fa-bolt"></i>
+            <span>Open ProofStudio</span>
+          </a>
+          <button id="signout-btn" class="submit-btn" style="background: rgba(255, 255, 255, 0.1); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: none;">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Database & System Status Badge -->
+      <div class="atlas-status-badge">
+        <div>
+          <span class="status-dot green" id="mongo-status-dot"></span>
+          <span id="mongo-status-text">MongoDB Atlas: Checking...</span>
+        </div>
+        <div id="google-status-text" style="color: #71717a;">Google OAuth: Ready</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="main.js"></script>
+  <script>
+    const tabSignin = document.getElementById('tab-signin');
+    const tabRegister = document.getElementById('tab-register');
+    const signinForm = document.getElementById('signin-form');
+    const registerForm = document.getElementById('register-form');
+    const authHeading = document.getElementById('auth-heading');
+    const authSubheading = document.getElementById('auth-subheading');
+    const authAlert = document.getElementById('auth-alert');
+    const googleBtn = document.getElementById('google-signin-btn');
+    const loggedOutView = document.getElementById('logged-out-view');
+    const loggedInView = document.getElementById('logged-in-view');
+    const signoutBtn = document.getElementById('signout-btn');
+    const mongoStatusDot = document.getElementById('mongo-status-dot');
+    const mongoStatusText = document.getElementById('mongo-status-text');
+    const googleStatusText = document.getElementById('google-status-text');
+
+    function showAlert(msg, type = 'error') {
+      authAlert.className = `alert-box ${type}`;
+      authAlert.textContent = msg;
+    }
+
+    function clearAlert() {
+      authAlert.className = 'alert-box';
+      authAlert.textContent = '';
+    }
+
+    // Switch Tabs
+    tabSignin.addEventListener('click', () => {
+      tabSignin.classList.add('active');
+      tabRegister.classList.remove('active');
+      signinForm.style.display = 'block';
+      registerForm.style.display = 'none';
+      authHeading.textContent = 'Sign in to ProofShield';
+      authSubheading.textContent = 'Authenticate using Google OAuth or your registered email credentials.';
+      clearAlert();
+    });
+
+    tabRegister.addEventListener('click', () => {
+      tabRegister.classList.add('active');
+      tabSignin.classList.remove('active');
+      signinForm.style.display = 'none';
+      registerForm.style.display = 'block';
+      authHeading.textContent = 'Create New Account';
+      authSubheading.textContent = 'Register a new enterprise user. Profile will be persisted to MongoDB Atlas.';
+      clearAlert();
+    });
+
+    // Check system status
+    async function checkSystemStatus() {
+      try {
+        const res = await fetch('/api/system/status');
+        const data = await res.json();
+        if (data.auth && data.auth.mongo) {
+          if (data.auth.mongo.isConnected) {
+            mongoStatusDot.className = 'status-dot green';
+            mongoStatusText.textContent = `MongoDB Atlas: Connected (${data.auth.mongo.dbName})`;
+          } else {
+            mongoStatusDot.className = 'status-dot amber';
+            mongoStatusText.textContent = 'MongoDB: In-Memory (Set MONGODB_URI in .env)';
+          }
+        }
+        if (data.auth) {
+          googleStatusText.textContent = data.auth.hasGoogleConfig
+            ? 'Google OAuth: Active'
+            : 'Google OAuth: Pending .env Keys';
+        }
+      } catch (e) {
+        mongoStatusText.textContent = 'Backend: Standalone Static';
+      }
+    }
+
+    // Check active session
+    async function checkSession() {
+      try {
+        const res = await fetch('/api/auth/get-session', { credentials: 'include' });
+        if (res.ok) {
+          const session = await res.json();
+          if (session && session.user) {
+            loggedOutView.style.display = 'none';
+            loggedInView.style.display = 'block';
+            document.getElementById('user-name').textContent = session.user.name || 'ProofShield User';
+            document.getElementById('user-email').textContent = session.user.email || '';
+            document.getElementById('user-org').textContent = session.user.organization || 'Enterprise Security Analyst';
+            return;
+          }
+        }
+      } catch (e) {
+        console.log('No active session.');
+      }
+      loggedOutView.style.display = 'block';
+      loggedInView.style.display = 'none';
+    }
+
+    // Handle Google Sign-In
+    googleBtn.addEventListener('click', async () => {
+      clearAlert();
+      googleBtn.disabled = true;
+      googleBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Connecting to Google...</span>';
+
+      try {
+        const res = await fetch('/api/auth/sign-in/social', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            provider: 'google',
+            callbackURL: window.location.origin + '/studio.html',
+          }),
+        });
+
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+        } else if (data.message) {
+          showAlert(data.message, 'info');
+          googleBtn.disabled = false;
+          googleBtn.innerHTML = '<i class="fa-brands fa-google"></i> <span>Continue with Google</span>';
+        } else {
+          showAlert('Google OAuth redirect initiated. If GOOGLE_CLIENT_ID is not configured in .env, add credentials to complete authentication.', 'info');
+          googleBtn.disabled = false;
+          googleBtn.innerHTML = '<i class="fa-brands fa-google"></i> <span>Continue with Google</span>';
+        }
+      } catch (err) {
+        showAlert('Google Sign-In requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET configured in .env', 'info');
+        googleBtn.disabled = false;
+        googleBtn.innerHTML = '<i class="fa-brands fa-google"></i> <span>Continue with Google</span>';
+      }
+    });
+
+    // Handle Email Sign In
+    signinForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearAlert();
+      const email = document.getElementById('signin-email').value.trim();
+      const password = document.getElementById('signin-password').value;
+      const btn = document.getElementById('signin-submit-btn');
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Signing In...</span>';
+
+      try {
+        const res = await fetch('/api/auth/sign-in/email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ email, password }),
+        });
+
+        const result = await res.json();
+        if (res.ok) {
+          showAlert('Signed in successfully! Redirecting...', 'success');
+          setTimeout(() => {
+            window.location.href = 'studio.html';
+          }, 800);
+        } else {
+          showAlert(result.message || 'Invalid credentials or user not registered.', 'error');
+          btn.disabled = false;
+          btn.innerHTML = '<span>Sign In</span> <i class="fa-solid fa-arrow-right"></i>';
+        }
+      } catch (err) {
+        showAlert('Authentication service connection failed: ' + err.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<span>Sign In</span> <i class="fa-solid fa-arrow-right"></i>';
+      }
+    });
+
+    // Handle New User Registration
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearAlert();
+      const name = document.getElementById('reg-name').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
+      const organization = document.getElementById('reg-org').value.trim() || 'Independent Analyst';
+      const password = document.getElementById('reg-password').value;
+      const confirm = document.getElementById('reg-confirm').value;
+      const btn = document.getElementById('register-submit-btn');
+
+      if (password !== confirm) {
+        showAlert('Passwords do not match.', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Registering User in MongoDB Atlas...</span>';
+
+      try {
+        const res = await fetch('/api/auth/sign-up/email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ name, email, password, organization }),
+        });
+
+        const result = await res.json();
+        if (res.ok) {
+          showAlert('Registration successful! User saved to database.', 'success');
+          setTimeout(() => {
+            window.location.href = 'studio.html';
+          }, 1000);
+        } else {
+          showAlert(result.message || 'Registration failed.', 'error');
+          btn.disabled = false;
+          btn.innerHTML = '<span>Create Account (Save to MongoDB Atlas)</span> <i class="fa-solid fa-user-plus"></i>';
+        }
+      } catch (err) {
+        showAlert('Registration error: ' + err.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<span>Create Account (Save to MongoDB Atlas)</span> <i class="fa-solid fa-user-plus"></i>';
+      }
+    });
+
+    // Handle Sign Out
+    if (signoutBtn) {
+      signoutBtn.addEventListener('click', async () => {
+        try {
+          await fetch('/api/auth/sign-out', { method: 'POST', credentials: 'include' });
+        } catch (e) {}
+        window.location.reload();
+      });
+    }
+
+    // Initialize
+    checkSystemStatus();
+    checkSession();
+  </script>
+</body>
+</html>

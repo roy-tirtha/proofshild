@@ -108,4 +108,48 @@ document.addEventListener('DOMContentLoaded', () => {
   if (statsFooter) {
     observer.observe(statsFooter);
   }
+
+  // 3. Better Auth Session Checker & Header State
+  async function checkHeaderAuth() {
+    const signInBtns = document.querySelectorAll('.sign-in-btn');
+    const mobileSignInBtns = document.querySelectorAll('.mobile-sign-in');
+
+    try {
+      const res = await fetch('/api/auth/get-session', { credentials: 'include' });
+      if (res.ok) {
+        const session = await res.json();
+        if (session && session.user) {
+          const displayName = session.user.name || session.user.email.split('@')[0];
+          signInBtns.forEach(btn => {
+            btn.href = 'auth.html';
+            btn.innerHTML = `<i class="fa-solid fa-circle-user" style="color: #4ade80; margin-right: 6px;"></i> <span>${displayName}</span>`;
+            btn.title = `Signed in as ${session.user.email} (MongoDB Atlas)`;
+          });
+          mobileSignInBtns.forEach(btn => {
+            btn.href = 'auth.html';
+            btn.innerHTML = `<i class="fa-solid fa-circle-user" style="color: #4ade80; margin-right: 6px;"></i> <span>Account (${displayName})</span>`;
+          });
+          return;
+        }
+      }
+    } catch (e) {
+      // Backend not running or static view
+    }
+
+    // Default: link to auth.html if not on auth.html
+    signInBtns.forEach(btn => {
+      if (!btn.getAttribute('data-keep-link')) {
+        btn.href = 'auth.html';
+        btn.textContent = 'Sign in';
+      }
+    });
+    mobileSignInBtns.forEach(btn => {
+      if (!btn.getAttribute('data-keep-link')) {
+        btn.href = 'auth.html';
+        btn.textContent = 'Sign in';
+      }
+    });
+  }
+
+  checkHeaderAuth();
 });
