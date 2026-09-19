@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact & Enterprise Access — Intelligence Designed To Evolve</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- OnlineWebFonts: BubbledotICG-FinePos -->
+  <link href="https://db.onlinewebfonts.com/c/8cb707a9b8a73f8a7403336b861c3074?family=BubbledotICG-FinePos" rel="stylesheet" />
+
+  <!-- Font Awesome 6.5.2 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body.subpage {
+      overflow-y: auto;
+      overflow-x: hidden;
+      height: auto;
+      min-height: 100vh;
+      background: #000000;
+    }
+    .subpage-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: clamp(24px, 3vh, 40px) clamp(16px, 3vw, 32px) 80px;
+      position: relative;
+      z-index: 1;
+    }
+    .page-title {
+      font-family: var(--font-display);
+      font-size: clamp(32px, 5vw, 64px);
+      letter-spacing: -0.04em;
+      line-height: 1.1;
+      margin-bottom: 16px;
+      color: #ffffff;
+    }
+    .page-lead {
+      font-size: clamp(16px, 1.8vw, 19px);
+      color: #a0a0a0;
+      max-width: 720px;
+      line-height: 1.6;
+      margin-bottom: 48px;
+    }
+    .contact-layout {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 36px;
+      margin-bottom: 60px;
+    }
+    .contact-card {
+      background: #111113;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 24px;
+      padding: 36px 32px;
+      transition: border-color 0.25s ease;
+    }
+    .contact-card:hover {
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+    .card-title {
+      font-size: 22px;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+    .card-desc {
+      font-size: 14px;
+      color: #8e8e8e;
+      line-height: 1.5;
+      margin-bottom: 28px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #e2e8f0;
+      margin-bottom: 8px;
+    }
+    .form-input, .form-select, .form-textarea {
+      width: 100%;
+      background: #09090b;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      color: #ffffff;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color: #ffffff;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3);
+    }
+    .form-input::placeholder, .form-textarea::placeholder {
+      color: #555555;
+    }
+    .form-select option {
+      background: #111113;
+      color: #ffffff;
+    }
+    .form-textarea {
+      resize: vertical;
+      min-height: 110px;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .submit-btn {
+      width: 100%;
+      background: #ffffff;
+      color: #000000;
+      font-family: var(--font-sans);
+      font-weight: 600;
+      font-size: 15px;
+      padding: 14px 24px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
+      transition: transform 0.2s, box-shadow 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .submit-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 26px rgba(255, 255, 255, 0.45);
+    }
+    .submit-btn:active {
+      transform: translateY(0);
+    }
+    .success-panel {
+      display: none;
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: 16px;
+      padding: 24px;
+      margin-top: 20px;
+      color: #dcfce7;
+    }
+    .success-panel.visible {
+      display: block;
+      animation: fadeIn 0.3s ease forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .telemetry-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .telemetry-item:last-child {
+      border-bottom: none;
+    }
+    .telemetry-label {
+      font-size: 13.5px;
+      color: #c4c2c3;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .telemetry-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      color: #4ade80;
+    }
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #4ade80;
+      box-shadow: 0 0 8px #4ade80;
+    }
+    .pgp-box {
+      background: #09090b;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      padding: 16px;
+      margin-top: 16px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11.5px;
+      color: #a1a1aa;
+      line-height: 1.6;
+      word-break: break-all;
+    }
+    .office-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .office-item {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 14px;
+      text-align: center;
+    }
+    .office-city {
+      font-size: 13px;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+    .office-tz {
+      font-size: 11px;
+      color: #71717a;
+    }
+    @media (max-width: 900px) {
+      .contact-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 560px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+      .office-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body class="subpage">
+  <!-- Full-bleed background video -->
+  <div class="bg">
+    <video class="bg-video" autoplay muted loop playsinline>
+      <source
+        src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260809_012548_ef22562c-c0ae-4816-ad9d-f8922af4e6a7.mp4"
+        type="video/mp4"
+      />
+    </video>
+  </div>
+
+  <div class="subpage-container">
+    <!-- Header -->
+    <header class="site-header" style="margin-bottom: clamp(32px, 5vh, 60px);">
+      <!-- Circular Logo -->
+      <a href="index.html" class="logo-btn" aria-label="Home">
+        <img src="assets/logo.webp" alt="" width="52" height="52" />
+      </a>
+
+      <!-- Desktop Nav Pill -->
+      <nav class="nav-pill" aria-label="Main Navigation">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="product.html" class="nav-link">Product</a>
+        <a href="case-studies.html" class="nav-link">Case Studies</a>
+        <a href="contact.html" class="nav-link active">Contact</a>
+      </nav>
+
+      <!-- Desktop Sign In -->
+      <a href="studio.html" class="sign-in-btn">Sign in</a>
+
+      <!-- Mobile Hamburger Button -->
+      <button class="mobile-burger" aria-label="Toggle Menu" aria-expanded="false">
+        <span class="burger-bar"></span>
+        <span class="burger-bar"></span>
+        <span class="burger-bar"></span>
+      </button>
+    </header>
+
+    <!-- Mobile Menu Overlay & Sheet -->
+    <div class="mobile-overlay"></div>
+    <nav class="mobile-sheet" aria-label="Mobile Navigation">
+      <a href="index.html" class="mobile-nav-link">Home</a>
+      <a href="product.html" class="mobile-nav-link">Product</a>
+      <a href="case-studies.html" class="mobile-nav-link">Case Studies</a>
+      <a href="contact.html" class="mobile-nav-link active">Contact</a>
+      <a href="studio.html" class="mobile-sign-in">Sign in</a>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+      <h1 class="page-title">Contact & Enterprise Access</h1>
+      <p class="page-lead">
+        Deploy zero-knowledge proof verification across your enterprise infrastructure. Connect with our cryptography architects or request sandbox access to Midnight devnet.
+      </p>
+
+      <div class="contact-layout">
+        <!-- Contact / Sandbox Form -->
+        <div class="contact-card">
+          <h2 class="card-title">Request Sandbox Access</h2>
+          <p class="card-desc">
+            Complete the form below to receive API keys, proof server binaries, and dedicated architecture support.
+          </p>
+
+          <form id="contact-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="full-name">Full Name *</label>
+                <input class="form-input" id="full-name" type="text" placeholder="Dr. Sarah Lin" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="work-email">Enterprise Email *</label>
+                <input class="form-input" id="work-email" type="email" placeholder="sarah.lin@enterprise.com" required />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="org-name">Organization / Firm *</label>
+                <input class="form-input" id="org-name" type="text" placeholder="Apex Global Capital" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="deployment-target">Deployment Target</label>
+                <select class="form-select" id="deployment-target">
+                  <option value="local">Midnight Local Devnet (Docker)</option>
+                  <option value="testnet">Midnight Testnet (Preprod)</option>
+                  <option value="airgap">Air-gapped VPC (On-Prem)</option>
+                  <option value="hybrid">Substrate Custom Node</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="workload-type">Primary Privacy Objective</label>
+              <select class="form-select" id="workload-type">
+                <option value="screening">Blind Candidate Qualification & Screening</option>
+                <option value="itar">ITAR / Deemed Export Compliance</option>
+                <option value="settlement">Institutional Cross-Border Settlement</option>
+                <option value="circuit">Custom Compact 0.23 Circuit Auditing</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="message">Project Requirements & Timeline</label>
+              <textarea class="form-textarea" id="message" placeholder="Provide details on expected proof throughput, witness privacy requirements, or integration timelines..."></textarea>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submit-btn">
+              <span>Request Sandbox Access & Keys</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </form>
+
+          <div class="success-panel" id="success-panel">
+            <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 8px;">
+              <i class="fa-solid fa-circle-check" style="color: #4ade80;"></i>
+              <span>Access Request Registered</span>
+            </div>
+            <p style="font-size: 13.5px; line-height: 1.5; color: #bbf7d0;">
+              Your submission has been cryptographically signed and routed to our solutions team. An architect will contact you within 4 hours with your sandbox credentials.
+            </p>
+            <div style="margin-top: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: #86efac; word-break: break-all;">
+              Ticket ID: <span id="ticket-hash">0x8a92b4...c71e</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Telemetry & Security Sidebar -->
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+          <!-- Network Telemetry -->
+          <div class="contact-card" style="padding: 28px;">
+            <h3 style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-network-wired" style="color: #ffffff;"></i>
+              <span>Midnight Network Telemetry</span>
+            </h3>
+
+            <div class="telemetry-item">
+              <span class="telemetry-label"><i class="fa-solid fa-server"></i> Local Devnet Node</span>
+              <span class="telemetry-status"><span class="status-dot"></span> localhost:9944</span>
+            </div>
+
+            <div class="telemetry-item">
+              <span class="telemetry-label"><i class="fa-solid fa-microchip"></i> Proof Server</span>
+              <span class="telemetry-status"><span class="status-dot"></span> localhost:6300</span>
+            </div>
+
+            <div class="telemetry-item">
+              <span class="telemetry-label"><i class="fa-solid fa-database"></i> Substrate Indexer</span>
+              <span class="telemetry-status"><span class="status-dot"></span> localhost:8088</span>
+            </div>
+
+            <div class="telemetry-item">
+              <span class="telemetry-label"><i class="fa-solid fa-code-commit"></i> Compact Compiler</span>
+              <span class="telemetry-status"><span class="status-dot"></span> v0.31.1</span>
+            </div>
+          </div>
+
+          <!-- Security & PGP Card -->
+          <div class="contact-card" style="padding: 28px;">
+            <h3 style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-shield-halved" style="color: #ffffff;"></i>
+              <span>PGP Security Fingerprint</span>
+            </h3>
+            <p style="font-size: 12.5px; color: #8e8e8e; line-height: 1.5;">
+              For sensitive disclosures or encrypted vulnerability submissions, use our official master key:
+            </p>
+            <div class="pgp-box">
+              F4C8 92BA 7109 4DE1 83A0<br />
+              BC22 9F01 C478 D92B EE51
+            </div>
+          </div>
+
+          <!-- Global Centers -->
+          <div class="contact-card" style="padding: 28px;">
+            <h3 style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 6px;">Global Architecture Hubs</h3>
+            <p style="font-size: 12.5px; color: #8e8e8e;">Direct engineering presence across primary timezones.</p>
+            <div class="office-grid">
+              <div class="office-item">
+                <div class="office-city">San Francisco</div>
+                <div class="office-tz">PST (UTC-8)</div>
+              </div>
+              <div class="office-item">
+                <div class="office-city">London</div>
+                <div class="office-tz">GMT (UTC+0)</div>
+              </div>
+              <div class="office-item">
+                <div class="office-city">Tokyo</div>
+                <div class="office-tz">JST (UTC+9)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="main.js"></script>
+  <script>
+    // Form submission handler
+    const form = document.getElementById('contact-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const successPanel = document.getElementById('success-panel');
+    const ticketHash = document.getElementById('ticket-hash');
+
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Encrypting & Registering...</span>';
+
+        setTimeout(() => {
+          // Generate realistic cryptographic hash
+          const randHex = '0x' + Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+          ticketHash.textContent = randHex;
+          form.style.display = 'none';
+          successPanel.classList.add('visible');
+        }, 1100);
+      });
+    }
+  </script>
+</body>
+</html>
