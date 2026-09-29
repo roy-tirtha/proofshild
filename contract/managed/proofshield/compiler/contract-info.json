@@ -57,8 +57,17 @@
       }
     },
     {
-      "name": "threshold",
+      "name": "claim_initialized",
       "index": 1,
+      "exported": true,
+      "storage": "Cell",
+      "type": {
+        "type-name": "Boolean"
+      }
+    },
+    {
+      "name": "threshold",
+      "index": 2,
       "exported": true,
       "storage": "Cell",
       "type": {

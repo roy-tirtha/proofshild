@@ -29,6 +29,7 @@ export type Circuits<PS> = {
 
 export type Ledger = {
   readonly claim_verified: boolean;
+  readonly claim_initialized: boolean;
   readonly threshold: bigint;
 }
 

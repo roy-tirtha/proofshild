@@ -48,6 +48,7 @@ by anyone — including a verifier or recruiter:
 |---|---|---|
 | `threshold` | `Uint<64>` | The minimum activity count required to pass |
 | `claim_verified` | `Boolean` | Whether the prover's count met the threshold |
+| `claim_initialized` | `Boolean` | Whether the one-time public threshold has been set |
 
 **This is the minimum a verifier needs.** They know the bar was set to `N`
 and whether the prover cleared it. Nothing else.
@@ -59,11 +60,13 @@ to the chain**:
 
 | Input | Type | Meaning |
 |---|---|---|
-| `activity_count` | `Uint<64>` | The actual number of verified activities the prover has |
+| `activity_count` | `Uint<64>` | A count the prover self-reports as private input |
 
-The `activity_count` is supplied as a circuit argument (a private witness). The
-Compact compiler generates a ZK proof from this value. The proof verifies the
-claim `activity_count >= threshold` without revealing the raw number.
+The `activity_count` is supplied by the user as a circuit argument (a private
+witness). The Compact compiler generates a ZK proof from this value. The proof
+verifies the claim `activity_count >= threshold` without revealing the raw
+number. This initial circuit does **not** verify the count's source or truth;
+it proves only the comparison. A trusted attestation/oracle is future work.
 
 A verifier can confirm the proof is valid and see `claim_verified = true` —
 but they cannot determine whether the prover had exactly 10, 15, or 1000
@@ -88,9 +91,10 @@ client-reported association, not a server-verified cryptographic ownership
 signature. Proof
 records are restricted to transaction hash, circuit, contract, public
 threshold, and public pass/fail result. Raw activity counts, private witnesses,
-wallet secrets, and serialized proof payloads are not stored. The web app does
-not yet submit circuits, so proof records remain empty until real on-chain
-calls are implemented. Because wallet addresses and transaction hashes are
+wallet secrets, and serialized proof payloads are not stored. The browser's
+proof form submits both Compact circuits through Midnight.js and the connected
+wallet. The activity count is sent to the connected wallet for proving, but is
+not submitted to ProofShield's API or stored by the server. Because wallet addresses and transaction hashes are
 linked to account IDs, the ProofShield backend/database operator can associate
 those public chain artifacts with the user's account. The Compact circuit does
 not hide that metadata linkage; disclose it to users.
@@ -130,10 +134,11 @@ docker compose up -d --wait node indexer proof-server
 ## Launch Interactive Web UI
 
 Run the API server and Vite, then use the landing page, authentication page,
-and signed-in profile. The profile displays linked wallet addresses and loads
-recent wallet transactions after a wallet is connected. Proof transaction
-records are shown only if they exist in the database; browser proof submission
-is not implemented yet.
+and signed-in profile. The profile connects Lace or 1AM, displays linked wallet
+addresses and recent wallet transactions, reads Preprod contract state, sets a
+threshold once, and submits a private-count proof transaction.
+The current circuit proves the threshold comparison only; it does not attest
+that the user-reported count is true.
 
 ```bash
 # Launch development server:
@@ -147,6 +152,15 @@ Open **`http://localhost:5173/`**. Create an account or sign in at
 `http://localhost:5173/profile.html`. Install Lace or 1AM to connect a Preprod
 wallet from the navbar. Never enter a wallet seed or mnemonic into the web app.
 Vite proxies `/api` to the Express server.
+
+In the profile's **Generate a private proof** form, paste the deployed Preprod
+contract address, choose the public threshold, and enter a strong 16+ character
+password for encrypted browser storage. Click **Read on-chain state**, set the
+threshold once, then enter the private activity count and submit the proof.
+Lace/1AM will prompt for proving/transaction approval. The app never sends the
+private count to its API. To use a Vercel deployment, set `VITE_CONTRACT_ADDRESS`
+to the address returned by `yarn deploy` and redeploy; the address can also be
+pasted into the profile form.
 
 ### Vercel demo and API
 

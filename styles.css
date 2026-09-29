@@ -420,6 +420,22 @@ header.site-header {
   z-index: 1;
 }
 
+.hero-art {
+  position: absolute;
+  z-index: -1;
+  width: min(58vw, 720px);
+  height: auto;
+  right: max(-140px, calc((100vw - 1320px) / 2));
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: .82;
+  pointer-events: none;
+}
+
+@media (max-width: 720px) {
+  .hero-art { width: 100vw; right: -42vw; top: 56%; opacity: .34; }
+}
+
 /* Headline */
 .headline {
   font-family: var(--font-display);

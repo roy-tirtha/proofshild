@@ -16,7 +16,7 @@ pragma language_version 0.23;
 //                      machine in plaintext.
 //
 // LEVEL 1 SCOPE:
-//   The prover supplies a private count of verified activities.
+//   The prover supplies a private self-reported activity count.
 //   If count >= threshold, the contract publicly records:
 //     claim_verified = true
 //   The raw count stays private. Only the boolean outcome is
@@ -36,6 +36,9 @@ pragma language_version 0.23;
 // Has the user successfully proven they meet the minimum threshold?
 export ledger claim_verified: Boolean;
 
+// Prevent anyone from changing the public requirement after setup.
+export ledger claim_initialized: Boolean;
+
 // The minimum activity count required to pass the proof.
 // Stored publicly so verifiers know the bar that was met.
 export ledger threshold: Uint<64>;
@@ -50,15 +53,18 @@ export ledger threshold: Uint<64>;
 // Must be called once before submitting_proof.
 // The threshold itself is public (verifiers need to know what bar was set).
 export circuit initialise_claim(required_count: Uint<64>): [] {
+  assert(!claim_initialized, "claim is already initialized");
+  assert(required_count > 0, "threshold must be positive");
   threshold = disclose(required_count);
   claim_verified = disclose(false);
+  claim_initialized = disclose(true);
 }
 
 // submit_proof: The core privacy circuit.
 //
 // PRIVATE INPUT (witness):
-//   activity_count — the actual number of verified technical
-//   activities the user has. This value is a private witness:
+//   activity_count — the count the user chooses to claim. This value
+//   is private witness input, not independently attested by this contract:
 //   it is used inside the ZK circuit but is NEVER written to
 //   the public ledger. Only the boolean outcome is disclosed.
 //
@@ -69,6 +75,7 @@ export circuit initialise_claim(required_count: Uint<64>): [] {
 // A verifier can later read claim_verified on-chain without
 // ever learning the actual activity_count.
 export circuit submit_proof(activity_count: Uint<64>): [] {
+  assert(claim_initialized, "initialize claim before proving");
   const passes: Boolean = activity_count >= threshold;
   claim_verified = disclose(passes);
 }

@@ -41,9 +41,11 @@ document.addEventListener('DOMContentLoaded', () => {
     .then((response) => response.ok ? response.json() : null)
     .then((session) => {
       const signedIn = Boolean(session?.user);
+      const displayName = session?.user?.name?.trim() || session?.user?.email?.split('@')[0] || 'Account';
       accountLinks.forEach((link) => {
         link.href = signedIn ? 'profile.html' : 'auth.html';
-        link.textContent = signedIn ? 'Profile' : 'Sign in';
+        link.textContent = signedIn ? displayName : 'Sign in';
+        if (signedIn) link.setAttribute('aria-label', `Open ${displayName}'s profile`);
       });
     })
     .catch(() => {

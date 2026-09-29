@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#080b12" />
   <title>Your Profile — ProofShield</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <style>
@@ -18,6 +19,12 @@
     .profile-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
     .profile-card { min-width: 0; border: 1px solid #283246; border-radius: 18px; background: rgba(13, 19, 31, .88); padding: 22px; }
     .profile-card h2 { font-size: 17px; margin-bottom: 16px; }
+    .proof-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .proof-control { display: grid; gap: 6px; }
+    .proof-control label { color: #aab3c2; font-size: 12px; }
+    .proof-control input { width: 100%; min-width: 0; border: 1px solid #39455b; border-radius: 9px; background: #090e17; color: #f4f7fb; padding: 10px 11px; }
+    .proof-private-note { color: #95a1b2; font-size: 12px; line-height: 1.55; grid-column: 1 / -1; margin: 0; }
+    .proof-actions { display: flex; flex-wrap: wrap; gap: 10px; grid-column: 1 / -1; }
     .profile-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
     .profile-field small, .wallet-item small { display: block; color: #8e9aab; margin-bottom: 6px; }
     .profile-field strong { overflow-wrap: anywhere; font-size: 14px; font-weight: 500; }
@@ -38,6 +45,7 @@
     [hidden] { display: none !important; }
     @media (max-width: 720px) {
       .profile-grid, .profile-fields { grid-template-columns: 1fr; }
+      .proof-form { grid-template-columns: 1fr; }
       .profile-section-wide { grid-column: auto; }
       .profile-header { margin-bottom: 32px; }
     }
@@ -46,7 +54,7 @@
 <body>
   <div class="profile-page">
     <header class="site-header profile-header">
-      <a href="index.html" class="logo-btn" aria-label="ProofShield home"><img src="assets/logo.webp" alt="" width="52" height="52" /></a>
+      <a href="index.html" class="logo-btn" aria-label="ProofShield home"><img src="assets/proofshield-mark.svg" alt="" width="52" height="52" /></a>
       <nav class="nav-pill" aria-label="Main Navigation">
         <a href="index.html" class="nav-link">Home</a>
         <a href="profile.html" class="nav-link active">Profile</a>
@@ -93,6 +101,36 @@
           <section class="profile-card profile-section-wide" aria-labelledby="proof-history-heading">
             <h2 id="proof-history-heading">Proof transaction records</h2>
             <div id="proof-history" class="profile-list"><p class="profile-muted">Loading transaction records…</p></div>
+          </section>
+          <section class="profile-card profile-section-wide" aria-labelledby="proof-console-heading">
+            <h2 id="proof-console-heading">Generate a private proof</h2>
+            <p class="profile-muted">You provide the count as a private input; this contract does not independently verify its source. It is passed to your connected wallet for proving and is not sent to ProofShield’s server. The threshold and pass/fail result are public on-chain.</p>
+            <form id="proof-form" class="proof-form">
+              <div class="proof-control profile-section-wide">
+                <label for="proof-contract-address">Preprod contract address</label>
+                <input id="proof-contract-address" name="contractAddress" required autocomplete="off" spellcheck="false" placeholder="Paste the address returned by yarn deploy" />
+              </div>
+              <div class="proof-control">
+                <label for="proof-threshold">Public threshold</label>
+                <input id="proof-threshold" name="threshold" type="number" min="1" max="18446744073709551615" step="1" required value="10" />
+              </div>
+              <div class="proof-control">
+                <label for="proof-count">Private activity count</label>
+                <input id="proof-count" name="activityCount" type="number" min="0" max="18446744073709551615" step="1" required />
+              </div>
+              <div class="proof-control profile-section-wide">
+                <label for="proof-storage-password">Private-state storage password</label>
+                <input id="proof-storage-password" name="storagePassword" type="password" minlength="16" autocomplete="new-password" required />
+              </div>
+              <p class="proof-private-note">Use a password with at least 16 characters, including three character types. It encrypts Midnight.js state in this browser and is never uploaded. Keep it safe; clearing browser storage removes local state.</p>
+              <div id="proof-ledger-state" class="profile-muted profile-section-wide" aria-live="polite">Connect a Preprod wallet to inspect or use the contract.</div>
+              <div class="proof-actions">
+                <button id="proof-refresh" class="profile-button" type="button">Read on-chain state</button>
+                <button id="proof-initialize" class="profile-button" type="button" disabled>Set threshold on-chain</button>
+                <button id="proof-submit" class="profile-button" type="submit" disabled>Generate & submit proof</button>
+              </div>
+              <p id="proof-message" class="profile-message profile-section-wide" role="status"></p>
+            </form>
           </section>
         </div>
         <div class="profile-actions"><button id="profile-signout" class="profile-button" type="button">Sign out</button></div>

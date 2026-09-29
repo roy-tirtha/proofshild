@@ -10,7 +10,9 @@
   "scripts": {
     "start": "node server/index.js",
     "server": "node server/index.js",
+    "predev": "node scripts/copy-zk-artifacts.js",
     "dev": "vite --host 127.0.0.1 --port 5173",
+    "prebuild": "node scripts/copy-zk-artifacts.js",
     "build": "vite build",
     "preview": "vite preview",
     "compile": "compact compile contract/proofshield.compact contract/managed/proofshield",
@@ -27,6 +29,8 @@
     "@better-auth/mongo-adapter": "^1.7.5",
     "@midnight-ntwrk/dapp-connector-api": "^4.0.1",
     "@midnight-ntwrk/midnight-js-contracts": "4.1.1",
+    "@midnight-ntwrk/midnight-js-dapp-connector-proof-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-fetch-zk-config-provider": "4.1.1",
     "@midnight-ntwrk/midnight-js-http-client-proof-provider": "4.1.1",
     "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "4.1.1",
     "@midnight-ntwrk/midnight-js-level-private-state-provider": "4.1.1",
