@@ -1,9 +1,6 @@
+import { toNodeHandler } from 'better-auth/node';
 import { auth } from '../../server/auth.js';
 
-export function GET(request) {
-  return auth.handler(request);
-}
+export const config = { api: { bodyParser: false } };
 
-export function POST(request) {
-  return auth.handler(request);
-}
+export default toNodeHandler(auth.handler);
