@@ -121,15 +121,13 @@ describe(`ProofShield Contract (${network})`, () => {
     await wallet.start();
     await syncWallet(logger, wallet.wallet, syncTimeoutMs);
 
-    if (isRemote) {
-      const nightBalance = await waitForFunds(
-        wallet.wallet,
-        envConfig,
-        false,
-        wallet.unshieldedKeystore,
-      );
-      logger.info(`Wallet NIGHT balance on '${network}': ${nightBalance}`);
-    }
+    const nightBalance = await waitForFunds(
+      wallet.wallet,
+      envConfig,
+      false,
+      wallet.unshieldedKeystore,
+    );
+    logger.info(`Wallet NIGHT balance on '${network}': ${nightBalance}`);
 
     providers = buildProviders(wallet, zkConfigPath, config);
     logger.info(`Providers initialized on '${network}'. Ready to test!`);
