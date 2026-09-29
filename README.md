@@ -27,7 +27,7 @@ deployment.
 - Compact source with two circuits and generated proving/verifying artifacts
 - Local Midnight integration tests for deploy, threshold initialization, and passing/failing proofs
 - A helper to deploy to Preview or Preprod and save the returned address
-- Lace DApp Connector wallet connect/disconnect in the Studio
+- Lace and 1AM DApp Connector wallet connect/disconnect in the Studio
 - GitHub Actions workflow for compilation, frontend build, and generated-circuit logic tests
 
 ---
@@ -120,9 +120,11 @@ yarn dev
 npm run dev
 ```
 
-Open **`http://localhost:5173/studio.html`** in a browser with Lace installed.
-Choose Preprod when the wallet prompts for a network and approve the connection.
-Never enter a wallet seed or mnemonic into the web app.
+Open **`http://localhost:5173/studio.html`** in a browser with Lace or 1AM
+installed. If both are available, choose one in the wallet selector. Select
+Preprod when prompted and approve the connection. Fund the wallet and ensure
+DUST is available before any future transaction flow. Never enter a wallet
+seed or mnemonic into the web app.
 
 ---
 
@@ -254,7 +256,7 @@ midnight-risin/
 Moonshots on Midnight" program.
 
 - ✅ Level 1: Contract foundation (this repository)
-- ✅ Level 2 foundation: Lace wallet connection and disconnect
+- ✅ Level 2 foundation: Lace/1AM wallet connection and disconnect
 - ✅ CI: Compile, build, and circuit logic tests
 - ⬜ Browser circuit submission and live verifier queries
 - ⬜ Level 4: MVP on Preprod with real platform adapters

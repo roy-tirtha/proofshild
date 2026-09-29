@@ -439,7 +439,8 @@
         </div>
         <div class="status-pill" style="color: #94a3b8; display:flex; gap:8px; align-items:center">
           <span id="lace-status">Wallet disconnected</span>
-          <button id="lace-connect" type="button">Connect Lace</button>
+          <select id="wallet-choice" aria-label="Choose Midnight wallet" hidden></select>
+          <button id="lace-connect" type="button">Connect wallet</button>
           <button id="lace-disconnect" type="button" hidden>Disconnect</button>
         </div>
       </div>
@@ -649,15 +650,30 @@
 
     const connectButton = document.getElementById('lace-connect');
     const disconnectButton = document.getElementById('lace-disconnect');
+    const walletChoice = document.getElementById('wallet-choice');
     const status = document.getElementById('lace-status');
     const terminal = document.getElementById('terminal-box');
     let connectedApi;
 
     connectButton.addEventListener('click', async () => {
       try {
-        const wallets = Object.values(window.midnight ?? {});
-        if (!wallets.length) throw new Error('No Midnight wallet detected. Install Lace and refresh this page.');
-        const wallet = wallets.find(({ rdns }) => rdns.toLowerCase().includes('lace')) ?? wallets[0];
+        const wallets = Object.entries(window.midnight ?? {});
+        if (!wallets.length) throw new Error('No Midnight wallet detected. Install Lace or 1AM and refresh this page.');
+        if (wallets.length > 1 && walletChoice.options.length === 0) {
+          for (const [walletId, api] of wallets) {
+            const option = document.createElement('option');
+            option.value = walletId;
+            option.textContent = api.name;
+            walletChoice.append(option);
+          }
+          walletChoice.hidden = false;
+          connectButton.textContent = 'Connect selected wallet';
+          status.textContent = 'Choose Lace or 1AM, then connect.';
+          return;
+        }
+        const [walletId, wallet] = wallets.length === 1
+          ? wallets[0]
+          : wallets.find(([id]) => id === walletChoice.value) ?? wallets[0];
         const api = await wallet.connect('preprod');
         const [{ unshieldedAddress }, connection] = await Promise.all([
           api.getUnshieldedAddress(), api.getConnectionStatus()
@@ -675,8 +691,11 @@
     disconnectButton.addEventListener('click', () => {
       connectedApi = undefined;
       status.textContent = 'Wallet disconnected';
-      connectButton.hidden = false;
-      disconnectButton.hidden = true;
+        connectButton.hidden = false;
+        disconnectButton.hidden = true;
+        walletChoice.hidden = true;
+        walletChoice.replaceChildren();
+        connectButton.textContent = 'Connect wallet';
     });
 
     terminal.textContent = 'No circuit call was made. Configure a deployed contract and Midnight.js transaction provider to enable proving.';
