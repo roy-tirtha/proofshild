@@ -14,6 +14,10 @@ if (!isConnected || !db) {
 const googleClientId = process.env.GOOGLE_CLIENT_ID || '';
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
 const hasGoogleConfig = !!(googleClientId && googleClientSecret && !googleClientId.includes('your-google-client-id'));
+const configuredAuthURL = process.env.BETTER_AUTH_URL;
+const productionAuthURL = configuredAuthURL?.startsWith('https://')
+  ? configuredAuthURL
+  : `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL || 'proofshild.vercel.app'}`;
 const authSecret = process.env.BETTER_AUTH_SECRET;
 if (process.env.NODE_ENV === 'production' && (!authSecret || authSecret.length < 32)) {
   throw new Error('Set BETTER_AUTH_SECRET to a random value of at least 32 characters in production.');
@@ -35,7 +39,9 @@ const trustedOrigins = [
 
 export const auth = betterAuth({
   database: mongodbAdapter(db, { client }),
-  baseURL: process.env.BETTER_AUTH_URL || 'http://localhost:3000',
+  baseURL: process.env.NODE_ENV === 'production'
+    ? productionAuthURL
+    : configuredAuthURL || 'http://localhost:5173',
   secret: authSecret || 'proofshield-local-development-secret-only-32-chars',
   trustedOrigins,
   emailAndPassword: {
