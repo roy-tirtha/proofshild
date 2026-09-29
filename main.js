@@ -1,3 +1,5 @@
+import './wallet-navbar.js';
+
 document.addEventListener('DOMContentLoaded', () => {
   // 1. Mobile Menu Logic
   const burger = document.querySelector('.mobile-burger');
@@ -111,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 3. Better Auth Session Checker & Header State
   async function checkHeaderAuth() {
-    const signInBtns = document.querySelectorAll('.sign-in-btn');
+    const signInBtns = document.querySelectorAll('a.sign-in-btn');
     const mobileSignInBtns = document.querySelectorAll('.mobile-sign-in');
 
     try {

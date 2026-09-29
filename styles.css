@@ -105,7 +105,7 @@ body {
 /* 1) Header */
 header.site-header {
   width: 100%;
-  max-width: 720px;
+  max-width: 960px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -235,6 +235,29 @@ header.site-header {
   transform: translateY(-1px);
 }
 
+.wallet-nav-button {
+  background: #ffffff;
+  color: #111111;
+  font-weight: 600;
+}
+
+.wallet-nav-button:hover {
+  background: #e8fff3;
+  color: #111111;
+}
+
+.wallet-nav-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Mobile Hamburger (Hidden on desktop) */
 .mobile-burger {
   display: none;
@@ -361,7 +384,8 @@ header.site-header {
   box-shadow: -5px 0 0 #2e2e2e, 5px 0 0 #2e2e2e;
 }
 
-.mobile-sign-in {
+.mobile-sign-in,
+.mobile-wallet-connect {
   background: #28282a;
   color: #ffffff;
   font-family: var(--font-sans);
@@ -375,7 +399,14 @@ header.site-header {
   transition: background 0.2s;
 }
 
-.mobile-sign-in:hover {
+.mobile-wallet-connect {
+  width: 100%;
+  border: 0;
+  cursor: pointer;
+}
+
+.mobile-sign-in:hover,
+.mobile-wallet-connect:hover {
   background: #323234;
 }
 
