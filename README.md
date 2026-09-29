@@ -28,7 +28,7 @@ deployment.
 - Local Midnight integration tests for deploy, threshold initialization, and passing/failing proofs
 - A helper to deploy to Preview or Preprod and save the returned address
 - Lace DApp Connector wallet connect/disconnect in the Studio
-- GitHub Actions workflow for compilation, frontend build, and local contract tests
+- GitHub Actions workflow for compilation, frontend build, and generated-circuit logic tests
 
 ---
 
@@ -157,19 +157,26 @@ contract/managed/proofshield/
 
 ## Testing
 
-### Local integration tests (Docker services must be running)
+### Circuit logic tests
 
 ```bash
-docker compose up -d --wait node indexer proof-server
-MIDNIGHT_NETWORK=local yarn test
+yarn test
 ```
 
-The test suite runs 4 tests that verify the core privacy model:
+These four tests execute the generated Compact circuits directly and check the
+public ledger output:
 
 1. **Deploy** — Contract deploys, initial state is `claim_verified=false`, `threshold=0`
 2. **Initialise** — Threshold is set to 10; visible publicly on the ledger
 3. **Pass proof** — Private count of 15 ≥ 10 → `claim_verified=true` (count stays private)
 4. **Fail proof** — Private count of 5 < 10 → `claim_verified=false` (count stays private)
+
+### Network integration tests
+
+The integration suite deploys a contract and submits transactions, so it needs
+a running Midnight node, indexer, proof server, and a wallet funded with NIGHT
+and registered DUST. Run it with `yarn test:local`; use `yarn test:preprod` or
+`yarn test:preview` for remote networks.
 
 ### Remote tests (Preview or Preprod)
 
@@ -179,11 +186,6 @@ The test suite runs 4 tests that verify the core privacy model:
    ```
 2. Edit `.env.preprod` and add your wallet seed or mnemonic
 3. Fund your wallet from the faucet: https://midnight-tmnight-preprod.nethermind.dev/
-4. Run:
-   ```bash
-   MIDNIGHT_NETWORK=preprod yarn test
-   ```
-
 ---
 
 ## Deployment
@@ -253,7 +255,7 @@ Moonshots on Midnight" program.
 
 - ✅ Level 1: Contract foundation (this repository)
 - ✅ Level 2 foundation: Lace wallet connection and disconnect
-- ✅ CI: Compile, build, and local contract integration workflow
+- ✅ CI: Compile, build, and circuit logic tests
 - ⬜ Browser circuit submission and live verifier queries
 - ⬜ Level 4: MVP on Preprod with real platform adapters
 - ⬜ Level 5: User onboarding (50 Preprod users)

@@ -20,7 +20,4 @@ jobs:
       - run: yarn install --frozen-lockfile
       - run: yarn compile
       - run: yarn build
-      - run: docker compose up -d --wait node indexer proof-server
-      - run: yarn test:local
-      - if: always()
-        run: docker compose down -v
+      - run: yarn test
