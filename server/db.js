@@ -74,26 +74,6 @@ async function ensureApplicationCollections(database) {
         },
       },
     },
-    {
-      name: 'proof_records',
-      validator: {
-        $jsonSchema: {
-          bsonType: 'object',
-          required: ['userId', 'network', 'contractAddress', 'transactionHash', 'circuit', 'threshold', 'claimVerified', 'createdAt'],
-          properties: {
-            userId: { bsonType: 'string', minLength: 1 },
-            walletAddress: { bsonType: 'string', maxLength: 256 },
-            network: { enum: ['local', 'preview', 'preprod'] },
-            contractAddress: { bsonType: 'string', minLength: 1, maxLength: 256 },
-            transactionHash: { bsonType: 'string', minLength: 1, maxLength: 256 },
-            circuit: { enum: ['initialise_claim', 'submit_proof'] },
-            threshold: { bsonType: 'string', pattern: '^[0-9]+$' },
-            claimVerified: { bsonType: 'bool' },
-            createdAt: { bsonType: 'date' },
-          },
-        },
-      },
-    },
   ];
 
   const existing = new Set((await database.listCollections({}, { nameOnly: true }).toArray()).map((entry) => entry.name));
@@ -110,11 +90,6 @@ async function ensureApplicationCollections(database) {
     { unique: true, name: 'unique_network_wallet' },
   );
   await database.collection('wallet_links').createIndex({ userId: 1, network: 1 }, { name: 'wallets_by_user_network' });
-  await database.collection('proof_records').createIndex(
-    { network: 1, transactionHash: 1 },
-    { unique: true, name: 'unique_network_proof_transaction' },
-  );
-  await database.collection('proof_records').createIndex({ userId: 1, createdAt: -1 }, { name: 'proofs_by_user_recent' });
 }
 
 export function getDb() {

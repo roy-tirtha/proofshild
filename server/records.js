@@ -52,53 +52,6 @@ export async function handleWalletRecords(request, response) {
   }
 }
 
-export async function handleProofRecords(request, response) {
-  try {
-    const user = await currentUser(request);
-    if (!user) return respond(response, 401, { error: 'Sign in before saving proof records.' });
-
-    const collection = getDb().collection('proof_records');
-    if (request.method === 'GET') {
-      const proofs = await collection.find({ userId: user.id }).sort({ createdAt: -1 }).limit(100).toArray();
-      return respond(response, 200, { proofs });
-    }
-    if (request.method !== 'POST') return respond(response, 405, { error: 'Method not allowed.' });
-
-    const {
-      network, walletAddress, contractAddress, transactionHash, circuit, threshold, claimVerified,
-    } = request.body ?? {};
-    if (
-      !supportedNetworks.has(network) ||
-      typeof contractAddress !== 'string' || contractAddress.length < 1 || contractAddress.length > 256 ||
-      typeof transactionHash !== 'string' || transactionHash.length < 1 || transactionHash.length > 256 ||
-      !['initialise_claim', 'submit_proof'].includes(circuit) ||
-      typeof threshold !== 'string' || !/^\d{1,20}$/.test(threshold) ||
-      typeof claimVerified !== 'boolean' ||
-      (walletAddress !== undefined && (typeof walletAddress !== 'string' || walletAddress.length > 256))
-    ) {
-      return respond(response, 400, { error: 'Only public transaction metadata and public claim state can be stored.' });
-    }
-
-    const record = {
-      userId: user.id,
-      network,
-      contractAddress,
-      transactionHash,
-      circuit,
-      threshold,
-      claimVerified,
-      createdAt: new Date(),
-      ...(walletAddress ? { walletAddress } : {}),
-    };
-    const result = await collection.insertOne(record);
-    return respond(response, 201, { proof: { ...record, _id: result.insertedId } });
-  } catch (error) {
-    if (error?.code === 11000) return respond(response, 409, { error: 'This transaction is already recorded.' });
-    console.error('[Records] Proof operation failed:', error?.message);
-    return respond(response, 500, { error: 'Proof record could not be saved.' });
-  }
-}
-
 export async function handleDeleteWallet(request, response) {
   try {
     const user = await currentUser(request);

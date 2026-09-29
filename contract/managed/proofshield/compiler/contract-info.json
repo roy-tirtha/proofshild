@@ -4,15 +4,65 @@
   "runtime-version": "0.16.0",
   "circuits": [
     {
-      "name": "initialise_claim",
+      "name": "bid_commitment",
+      "pure": true,
+      "proof": false,
+      "arguments": [
+        {
+          "name": "amount",
+          "type": {
+            "type-name": "Uint",
+            "maxval": 18446744073709551615
+          }
+        },
+        {
+          "name": "salt",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "owner_commitment",
+      "pure": true,
+      "proof": false,
+      "arguments": [
+        {
+          "name": "secret",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "start_auction",
       "pure": false,
       "proof": true,
       "arguments": [
         {
-          "name": "required_count",
+          "name": "reserve",
           "type": {
             "type-name": "Uint",
             "maxval": 18446744073709551615
+          }
+        },
+        {
+          "name": "owner_secret",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
           }
         }
       ],
@@ -23,15 +73,79 @@
       }
     },
     {
-      "name": "submit_proof",
+      "name": "commit_bid",
       "pure": false,
       "proof": true,
       "arguments": [
         {
-          "name": "activity_count",
+          "name": "commitment",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
+      "name": "close_bidding",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "owner_secret",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
+      "name": "reveal_bid",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "amount",
           "type": {
             "type-name": "Uint",
             "maxval": 18446744073709551615
+          }
+        },
+        {
+          "name": "salt",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
+      "name": "finalize_auction",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "owner_secret",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
           }
         }
       ],
@@ -48,32 +162,93 @@
   ],
   "ledger": [
     {
-      "name": "claim_verified",
+      "name": "phase",
       "index": 0,
       "exported": true,
       "storage": "Cell",
       "type": {
-        "type-name": "Boolean"
+        "type-name": "Enum",
+        "name": "AuctionPhase",
+        "elements": [
+          "UNINITIALIZED",
+          "COMMIT",
+          "REVEAL",
+          "FINALIZED"
+        ]
       }
     },
     {
-      "name": "claim_initialized",
+      "name": "reserve_price",
       "index": 1,
-      "exported": true,
-      "storage": "Cell",
-      "type": {
-        "type-name": "Boolean"
-      }
-    },
-    {
-      "name": "threshold",
-      "index": 2,
       "exported": true,
       "storage": "Cell",
       "type": {
         "type-name": "Uint",
         "maxval": 18446744073709551615
       }
+    },
+    {
+      "name": "auction_owner_commitment",
+      "index": 2,
+      "exported": true,
+      "storage": "Cell",
+      "type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "commitments",
+      "index": 3,
+      "exported": true,
+      "storage": "Map",
+      "key": {
+        "type-name": "Bytes",
+        "length": 32
+      },
+      "value": {
+        "type-name": "Boolean"
+      }
+    },
+    {
+      "name": "revealed_bids",
+      "index": 4,
+      "exported": true,
+      "storage": "Map",
+      "key": {
+        "type-name": "Bytes",
+        "length": 32
+      },
+      "value": {
+        "type-name": "Uint",
+        "maxval": 18446744073709551615
+      }
+    },
+    {
+      "name": "highest_bid",
+      "index": 5,
+      "exported": true,
+      "storage": "Cell",
+      "type": {
+        "type-name": "Uint",
+        "maxval": 18446744073709551615
+      }
+    },
+    {
+      "name": "winning_commitment",
+      "index": 6,
+      "exported": true,
+      "storage": "Cell",
+      "type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "reveal_count",
+      "index": 7,
+      "exported": true,
+      "storage": "Counter"
     }
   ]
 }

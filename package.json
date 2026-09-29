@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "ProofShield - Privacy-first technical achievement verification on Midnight",
+  "description": "ProofShield - Commit-reveal sealed-bid auction on Midnight",
   "engines": {
     "node": ">=22.0.0"
   },

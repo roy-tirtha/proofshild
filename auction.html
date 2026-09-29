@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#080b12" />
+  <title>Sealed Auction — ProofShield</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body { background: radial-gradient(ellipse at 50% -15%, #172137 0, #080b12 55%); }
+    .auction-page { min-height: 100vh; padding: 22px clamp(16px, 4vw, 48px) 64px; }
+    .auction-header { margin: 0 auto 42px; }
+    .auction-content { width: min(100%, 760px); margin: auto; }
+    .auction-card { border: 1px solid #283246; border-radius: 20px; background: rgba(13, 19, 31, .92); padding: clamp(22px, 4vw, 36px); }
+    .auction-card h1 { font-size: clamp(28px, 5vw, 40px); letter-spacing: -.04em; }
+    .auction-intro, .auction-note, .auction-status { color: #aab3c2; font-size: 14px; line-height: 1.65; }
+    .auction-intro { margin: 10px 0 24px; }
+    .auction-address, .auction-ledger { border: 1px solid #263043; background: #090e17; border-radius: 12px; padding: 14px; margin: 16px 0; }
+    .auction-address { display: flex; flex-wrap: wrap; gap: 8px; color: #95a1b2; }
+    .auction-address code { color: #b1c8ff; overflow-wrap: anywhere; }
+    .auction-ledger { color: #dce7f7; line-height: 1.8; }
+    .auction-forms { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+    .auction-control { display: grid; gap: 8px; }
+    .auction-control label { color: #d4dce8; font-size: 13px; }
+    .auction-control input { width: 100%; border: 1px solid #39455b; border-radius: 10px; background: #090e17; color: #f4f7fb; padding: 12px; }
+    .auction-button { border: 0; border-radius: 999px; background: #c9fff0; color: #08131a; font-weight: 700; padding: 13px 18px; cursor: pointer; }
+    .auction-button:disabled { cursor: not-allowed; opacity: .45; }
+    .auction-action { display: grid; align-content: start; gap: 12px; border: 1px solid #263043; border-radius: 14px; padding: 16px; }
+    .auction-action h2 { font-size: 18px; }
+    .auction-note { font-size: 12px; }
+    .auction-warning { color: #ffd19b; }
+    .auction-status { min-height: 24px; margin-top: 15px; overflow-wrap: anywhere; }
+    [hidden] { display: none !important; }
+    @media (max-width: 720px) { .auction-header { margin-bottom: 28px; } }
+  </style>
+</head>
+<body>
+  <div class="auction-page">
+    <header class="site-header auction-header">
+      <a href="index.html" class="logo-btn" aria-label="ProofShield home"><img src="assets/proofshield-mark.svg" alt="" width="52" height="52" /></a>
+      <nav class="nav-pill" aria-label="Main Navigation">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="auction.html" class="nav-link auction-nav-link active" aria-current="page">Sealed auction</a>
+        <a href="profile.html" class="nav-link">Profile</a>
+        <a href="auth.html" class="nav-link account-link">Sign in</a>
+      </nav>
+      <button class="sign-in-btn wallet-nav-button" type="button" data-wallet-connect>Connect wallet</button>
+      <span class="wallet-nav-status" data-wallet-status aria-live="polite"></span>
+      <button class="mobile-burger" aria-label="Toggle Menu" aria-expanded="false"><span class="burger-bar"></span><span class="burger-bar"></span><span class="burger-bar"></span></button>
+    </header>
+    <div class="mobile-overlay"></div>
+    <nav class="mobile-sheet" aria-label="Mobile Navigation">
+      <a href="index.html" class="mobile-nav-link">Home</a>
+      <a href="auction.html" class="mobile-nav-link auction-nav-link active" aria-current="page">Sealed auction</a>
+      <a href="profile.html" class="mobile-nav-link">Profile</a>
+      <a href="auth.html" class="mobile-sign-in">Sign in</a>
+      <button class="mobile-wallet-connect" type="button" data-wallet-connect>Connect wallet</button>
+    </nav>
+    <main class="auction-content">
+      <section class="auction-card" aria-labelledby="auction-title">
+        <h1 id="auction-title">Sealed-bid auction</h1>
+        <p class="auction-intro">Bidders publish a cryptographic commitment to their bid while keeping its amount and salt private. After bidding closes, bidders reveal their receipts; revealed amounts and the current winner then become public on-chain.</p>
+        <div class="auction-address"><span>Preprod contract</span><code id="auction-contract-address">Checking configuration…</code></div>
+        <p id="auction-address-warning" class="auction-warning" role="status" hidden></p>
+        <div id="auction-ledger" class="auction-ledger" aria-live="polite">Connect a Lace or 1AM wallet on Preprod to read the live auction state.</div>
+        <label class="auction-control"><span>Encrypted private-state password (16+ characters)</span><input id="auction-password" type="password" minlength="16" autocomplete="new-password" required /></label>
+        <p class="auction-note">This password protects Midnight private state in your browser. It is never sent to ProofShield.</p>
+        <div class="auction-forms">
+          <section class="auction-action">
+            <h2>Start auction</h2>
+            <label class="auction-control"><span>Public reserve amount</span><input id="auction-reserve" type="number" min="1" step="1" value="1" /></label>
+            <button id="auction-start" class="auction-button" type="button" disabled>Start auction</button>
+          </section>
+          <section class="auction-action">
+            <h2>Commit a bid</h2>
+            <label class="auction-control"><span>Private bid amount</span><input id="auction-bid" type="number" min="0" step="1" /></label>
+            <button id="auction-commit" class="auction-button" type="button" disabled>Commit bid &amp; save receipt</button>
+            <p class="auction-note">The amount and random salt are saved only in a receipt downloaded to your device. Keep it private and backed up: you need it to reveal. The chain receives only the commitment hash in this phase.</p>
+          </section>
+          <section class="auction-action">
+            <h2>Close bidding</h2>
+            <label class="auction-control"><span>Auction creator receipt</span><input id="auction-owner-receipt-close" type="file" accept="application/json,.json" /></label>
+            <p class="auction-note">Only the creator can close the global commit phase. Once closed, new bid commitments are rejected.</p>
+            <button id="auction-close" class="auction-button" type="button" disabled>Close bidding</button>
+          </section>
+          <section class="auction-action">
+            <h2>Reveal a bid</h2>
+            <label class="auction-control"><span>Private bid receipt JSON</span><input id="auction-receipt" type="file" accept="application/json,.json" /></label>
+            <button id="auction-reveal" class="auction-button" type="button" disabled>Reveal bid</button>
+            <p class="auction-note">Revealing makes your bid amount public. Reveals can be submitted by anyone who has the private receipt.</p>
+          </section>
+          <section class="auction-action">
+            <h2>Finalize</h2>
+            <label class="auction-control"><span>Auction creator receipt</span><input id="auction-owner-receipt-finalize" type="file" accept="application/json,.json" /></label>
+            <p class="auction-note">Finalize after the desired bids have been revealed. The contract records the highest revealed bid meeting the reserve.</p>
+            <button id="auction-finalize" class="auction-button" type="button" disabled>Finalize auction</button>
+          </section>
+        </div>
+        <p id="auction-message" class="auction-status" role="status" aria-live="polite"></p>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="main.js"></script>
+  <script type="module" src="auction.js"></script>
+</body>
+</html>

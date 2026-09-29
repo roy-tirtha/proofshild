@@ -6,6 +6,7 @@
   "rewrites": [
     { "source": "/profile", "destination": "/profile.html" },
     { "source": "/auth", "destination": "/auth.html" },
-    { "source": "/proof", "destination": "/proof.html" }
+    { "source": "/auction", "destination": "/auction.html" },
+    { "source": "/proof", "destination": "/auction.html" }
   ]
 }

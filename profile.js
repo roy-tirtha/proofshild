@@ -74,25 +74,6 @@ async function loadWallets() {
   renderWallets(result.wallets ?? []);
 }
 
-async function loadProofHistory() {
-  const response = await fetch('/api/proofs', { credentials: 'include' });
-  if (!response.ok) throw new Error('Could not load proof transaction records.');
-  const result = await response.json();
-  const records = result.proofs ?? [];
-  const list = byId('proof-history');
-  if (!records.length) {
-    addEmptyMessage(list, 'No proof transactions have been recorded for this account.');
-    return;
-  }
-  list.replaceChildren();
-  records.forEach((record) => addHistoryItem(list, {
-    title: `${record.circuit} · ${record.network}`,
-    detail: `Threshold ${record.threshold} · ${formatDate(record.createdAt)}`,
-    hash: record.transactionHash,
-    status: record.claimVerified ? 'Verified' : 'Recorded',
-  }));
-}
-
 function renderChainHistory(entries) {
   const list = byId('chain-history');
   if (!entries.length) {
@@ -123,9 +104,8 @@ async function initializeProfile() {
   byId('profile-created').textContent = formatDate(user.createdAt);
   byId('profile-loading').hidden = true;
   byId('profile-view').hidden = false;
-  const results = await Promise.allSettled([loadWallets(), loadProofHistory()]);
+  const results = await Promise.allSettled([loadWallets()]);
   if (results[0].status === 'rejected') addEmptyMessage(byId('wallet-list'), results[0].reason.message);
-  if (results[1].status === 'rejected') addEmptyMessage(byId('proof-history'), results[1].reason.message);
 }
 
 window.addEventListener('proofshield:wallet-connected', async (event) => {

@@ -2,15 +2,15 @@ import { dappConnectorProofProvider } from '@midnight-ntwrk/midnight-js-dapp-con
 import { FetchZkConfigProvider } from '@midnight-ntwrk/midnight-js-fetch-zk-config-provider';
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
 import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
-import { Binding, CostModel, Proof, SignatureEnabled, Transaction } from '@midnight-ntwrk/midnight-js-protocol/ledger';
+import { CostModel, Transaction } from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import { CompiledContract } from '@midnight-ntwrk/midnight-js-protocol/compact-js';
 import { submitCallTx } from '@midnight-ntwrk/midnight-js-contracts';
-import { Contract, ledger } from './contract/managed/proofshield/contract/index.js';
+import { Contract, ledger, pureCircuits } from './contract/managed/proofshield/contract/index.js';
 
 const networkId = 'preprod';
 const artifactBase = `${window.location.origin}/contract/managed/proofshield`;
-const privateStateId = 'ProofShieldBrowserState';
-const compiledContract = CompiledContract.make('ProofShieldContract', Contract)
+const privateStateId = 'ProofShieldAuctionBrowserState';
+const compiledContract = CompiledContract.make('ProofShieldAuction', Contract)
   .pipe(CompiledContract.withVacantWitnesses);
 
 function toHex(bytes) {
@@ -25,15 +25,15 @@ function fromHex(hex) {
   return Uint8Array.from(value.match(/.{2}/g), (byte) => Number.parseInt(byte, 16));
 }
 
-export async function createProofSession(api, storagePassword) {
+export function createBidCommitment(amount, salt) {
+  return pureCircuits.bid_commitment(BigInt(amount), salt);
+}
+
+export async function createAuctionSession(api, storagePassword) {
   if (typeof storagePassword !== 'string' || storagePassword.length < 16) {
     throw new Error('Enter a private-state password of at least 16 characters.');
   }
-
-  const [config, addresses] = await Promise.all([
-    api.getConfiguration(),
-    api.getShieldedAddresses(),
-  ]);
+  const [config, addresses] = await Promise.all([api.getConfiguration(), api.getShieldedAddresses()]);
   if (config.networkId !== networkId) {
     throw new Error(`Wallet is connected to ${config.networkId}, but this contract targets Preprod.`);
   }
@@ -42,11 +42,7 @@ export async function createProofSession(api, storagePassword) {
   }
 
   const zkConfigProvider = new FetchZkConfigProvider(artifactBase, window.fetch.bind(window));
-  const publicDataProvider = indexerPublicDataProvider(
-    config.indexerUri,
-    config.indexerWsUri,
-    window.WebSocket,
-  );
+  const publicDataProvider = indexerPublicDataProvider(config.indexerUri, config.indexerWsUri, window.WebSocket);
   const walletProvider = {
     getCoinPublicKey: () => addresses.shieldedCoinPublicKey,
     getEncryptionPublicKey: () => addresses.shieldedEncryptionPublicKey,
@@ -80,30 +76,38 @@ export async function createProofSession(api, storagePassword) {
   };
 }
 
-export async function readClaimState(providers, contractAddress) {
-  const contractState = await providers.publicDataProvider.queryContractState(contractAddress);
-  if (!contractState) throw new Error('No contract was found at that address on Preprod.');
-  return ledger(contractState.data);
+export async function readAuctionState(providers, contractAddress) {
+  const state = await providers.publicDataProvider.queryContractState(contractAddress);
+  if (!state) throw new Error('No auction contract was found at that address on Preprod.');
+  return ledger(state.data);
 }
 
-export async function readPreprodClaimState(contractAddress) {
-  const publicDataProvider = indexerPublicDataProvider(
+export async function readPreprodAuctionState(contractAddress) {
+  const provider = indexerPublicDataProvider(
     'https://indexer.preprod.midnight.network/api/v4/graphql',
     'wss://indexer.preprod.midnight.network/api/v4/graphql/ws',
     window.WebSocket,
   );
-  const contractState = await publicDataProvider.queryContractState(contractAddress);
-  if (!contractState) throw new Error('No contract was found at that address on Preprod.');
-  return ledger(contractState.data);
+  const state = await provider.queryContractState(contractAddress);
+  if (!state) throw new Error('No auction contract was found at that address on Preprod.');
+  return ledger(state.data);
 }
 
-export async function submitClaimCircuit(providers, contractAddress, circuitId, value) {
+export async function submitAuctionCircuit(providers, contractAddress, circuitId, args = []) {
   const result = await submitCallTx(providers, {
     compiledContract,
     contractAddress,
     privateStateId,
     circuitId,
-    args: [BigInt(value)],
+    args,
   });
   return result.public;
+}
+
+export function bytesToHex(bytes) {
+  return toHex(bytes);
+}
+
+export function hexToBytes(hex) {
+  return fromHex(hex);
 }

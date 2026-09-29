@@ -1,112 +1,51 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { WebSocket } from 'ws';
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
-import {
-  deployContract,
-  submitCallTx,
-  type DeployedContract,
-} from '@midnight-ntwrk/midnight-js-contracts';
+import { deployContract, submitCallTx, type DeployedContract } from '@midnight-ntwrk/midnight-js-contracts';
 import type { ContractAddress } from '@midnight-ntwrk/midnight-js-protocol/compact-runtime';
-import {
-  type EnvironmentConfiguration,
-  waitForFunds,
-} from '@midnight-ntwrk/testkit-js';
+import { type EnvironmentConfiguration, waitForFunds } from '@midnight-ntwrk/testkit-js';
 import pino from 'pino';
-
 import { getConfig } from '../config.js';
-import {
-  MidnightWalletProvider,
-  syncWallet,
-  type WalletSecret,
-} from '../wallet.js';
+import { MidnightWalletProvider, syncWallet, type WalletSecret } from '../wallet.js';
 import { buildProviders, type ProofShieldProviders } from '../providers.js';
-import {
-  CompiledProofShieldContract,
-  Contract,
-  ledger,
-  zkConfigPath,
-} from '../../index.js';
+import { CompiledProofShieldContract, Contract, ledger, pureCircuits, zkConfigPath } from '../../index.js';
 
-// Required for GraphQL subscriptions in Node.js
-// @ts-expect-error WebSocket global assignment for apollo
+// Required for GraphQL subscriptions in Node.js.
+// @ts-expect-error WebSocket global assignment for Apollo.
 globalThis.WebSocket = WebSocket;
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('UNHANDLED REJECTION:', reason);
-  console.error('Promise:', promise);
-});
-
-process.on('uncaughtException', (err) => {
-  console.error('UNCAUGHT EXCEPTION:', err);
-});
-
-// The Alice test wallet seed (deterministic local devnet seed)
-const ALICE_LOCAL_SEED =
-  '0000000000000000000000000000000000000000000000000000000000000001';
-const PRIVATE_STATE_ID = 'AlicePrivateProofShieldState';
-
-const logger = pino({
-  level: process.env['LOG_LEVEL'] ?? 'info',
-  transport: { target: 'pino-pretty' },
-});
-
+const LOCAL_SEED = '0000000000000000000000000000000000000000000000000000000000000001';
+const PRIVATE_STATE_ID = 'AlicePrivateProofShieldAuctionState';
+const OWNER_SECRET = new Uint8Array(32).fill(9);
+const BID_SALT = new Uint8Array(32).fill(7);
+const BID_AMOUNT = 12n;
+const logger = pino({ level: process.env['LOG_LEVEL'] ?? 'info' });
 const network = process.env['MIDNIGHT_NETWORK'] ?? 'local';
 
 function resolveSecret(net: string): WalletSecret {
-  if (net === 'local') return { kind: 'seed', value: ALICE_LOCAL_SEED };
-
-  const upper = net.toUpperCase();
-  const mnemonicEnv = `MIDNIGHT_${upper}_MNEMONIC`;
-  const seedEnv = `MIDNIGHT_${upper}_SEED`;
-  const mnemonic = process.env[mnemonicEnv]?.trim().replace(/\s+/g, ' ');
-  const seedHex = process.env[seedEnv]?.trim();
-
-  if (mnemonic && seedHex) {
-    throw new Error(
-      `Set only one of ${mnemonicEnv} or ${seedEnv} (both are defined).`,
-    );
-  }
-  if (mnemonic) {
-    return { kind: 'mnemonic', value: mnemonic };
-  }
-  if (seedHex) {
-    if (!/^[0-9a-fA-F]+$/.test(seedHex) || seedHex.length % 2 !== 0) {
-      throw new Error(
-        `${seedEnv} must be a hex string of even length (no 0x prefix).`,
-      );
-    }
-    return { kind: 'seed', value: seedHex };
-  }
-  throw new Error(
-    `Either ${mnemonicEnv} or ${seedEnv} is required for network '${net}'. ` +
-      `Set one in .env.${net} or the shell.`,
-  );
+  if (net === 'local') return { kind: 'seed', value: LOCAL_SEED };
+  const mnemonic = process.env[`MIDNIGHT_${net.toUpperCase()}_MNEMONIC`]?.trim().replace(/\s+/g, ' ');
+  const seed = process.env[`MIDNIGHT_${net.toUpperCase()}_SEED`]?.trim();
+  if (Boolean(mnemonic) === Boolean(seed)) throw new Error(`Set exactly one MIDNIGHT_${net.toUpperCase()}_MNEMONIC or _SEED.`);
+  return mnemonic ? { kind: 'mnemonic', value: mnemonic } : { kind: 'seed', value: seed! };
 }
 
-describe(`ProofShield Contract (${network})`, () => {
+describe(`ProofShield sealed auction (${network})`, () => {
   let wallet: MidnightWalletProvider;
   let providers: ProofShieldProviders;
   let contractAddress: ContractAddress;
-
   const config = getConfig();
   const secret = resolveSecret(network);
-  const isRemote = network !== 'local';
-  const syncTimeoutMs = Number(
-    process.env['MIDNIGHT_SYNC_TIMEOUT_MS'] ??
-      (isRemote ? 60 * 60_000 : 10 * 60_000),
-  );
 
-  // Helper: read current public ledger state from the chain
-  async function queryLedger(p: ProofShieldProviders) {
-    const state = await p.publicDataProvider.queryContractState(contractAddress);
+  async function queryLedger() {
+    const state = await providers.publicDataProvider.queryContractState(contractAddress);
     expect(state).not.toBeNull();
     return ledger(state!.data);
   }
 
   beforeAll(async () => {
     setNetworkId(config.networkId);
-
-    const envConfig: EnvironmentConfiguration = {
+    const env: EnvironmentConfiguration = {
       walletNetworkId: config.networkId,
       networkId: config.networkId,
       indexer: config.indexer,
@@ -116,126 +55,65 @@ describe(`ProofShield Contract (${network})`, () => {
       faucet: config.faucet,
       proofServer: config.proofServer,
     };
-
-    wallet = await MidnightWalletProvider.build(logger, envConfig, secret);
+    wallet = await MidnightWalletProvider.build(logger, env, secret);
     await wallet.start();
-    await syncWallet(logger, wallet.wallet, syncTimeoutMs);
-
-    const nightBalance = await waitForFunds(
-      wallet.wallet,
-      envConfig,
-      false,
-      wallet.unshieldedKeystore,
-    );
-    logger.info(`Wallet NIGHT balance on '${network}': ${nightBalance}`);
-
+    await syncWallet(logger, wallet.wallet, Number(process.env['MIDNIGHT_SYNC_TIMEOUT_MS'] ?? 3_600_000));
+    await waitForFunds(wallet.wallet, env, false, wallet.unshieldedKeystore);
     providers = buildProviders(wallet, zkConfigPath, config);
-    logger.info(`Providers initialized on '${network}'. Ready to test!`);
   });
 
   afterAll(async () => {
-    if (wallet) {
-      logger.info('Stopping wallet...');
-      await wallet.stop();
-    }
+    if (wallet) await wallet.stop();
   });
 
-  // ----------------------------------------------------------------
-  // Test 1: Deploy the contract
-  // Verifies that the ProofShield contract can be deployed and
-  // that the initial public ledger state is correct (no claim yet).
-  // ----------------------------------------------------------------
-  it('Deploys the ProofShield contract with no claim verified', async () => {
-    logger.info('Deploying ProofShield contract...');
-
-    const deployed: DeployedContract<Contract> =
-      await (deployContract<Contract>)(providers, {
-        compiledContract: CompiledProofShieldContract,
-        privateStateId: PRIVATE_STATE_ID,
-        initialPrivateState: {},
-      });
-
+  it('deploys, commits privately, reveals, and finalizes the auction', async () => {
+    const deployed: DeployedContract<Contract> = await deployContract<Contract>(providers, {
+      compiledContract: CompiledProofShieldContract,
+      privateStateId: PRIVATE_STATE_ID,
+      initialPrivateState: {},
+    });
     contractAddress = deployed.deployTxData.public.contractAddress;
-    logger.info(`Contract deployed at: ${contractAddress}`);
+    expect((await queryLedger()).phase).toBe(0);
 
-    expect(contractAddress).toBeDefined();
-    expect(contractAddress.length).toBeGreaterThan(0);
-
-    // Initial state: claim_verified should be false, threshold 0
-    const state = await queryLedger(providers);
-    expect(state.claim_verified).toBe(false);
-    expect(state.threshold).toBe(0n);
-  });
-
-  // ----------------------------------------------------------------
-  // Test 2: Initialise the claim threshold
-  // Sets the public threshold to 10 activities.
-  // This threshold is PUBLIC — a verifier can read it.
-  // ----------------------------------------------------------------
-  it('Initialises a claim threshold of 10 activities', async () => {
-    const THRESHOLD = 10n;
-
-    await (submitCallTx<Contract, 'initialise_claim'>)(providers, {
+    await submitCallTx<Contract, 'start_auction'>(providers, {
       compiledContract: CompiledProofShieldContract,
       contractAddress,
       privateStateId: PRIVATE_STATE_ID,
-      circuitId: 'initialise_claim',
-      args: [THRESHOLD],
+      circuitId: 'start_auction',
+      args: [5n, OWNER_SECRET],
     });
-
-    const state = await queryLedger(providers);
-    // The threshold is now visible publicly — verifiers know the bar
-    expect(state.threshold).toBe(THRESHOLD);
-    // But no proof has been submitted yet
-    expect(state.claim_verified).toBe(false);
-    logger.info(`Threshold set to ${state.threshold}. Claim not yet proven.`);
-  });
-
-  // ----------------------------------------------------------------
-  // Test 3: Submit a proof that PASSES (count >= threshold)
-  // The activity_count is a PRIVATE WITNESS — it is used inside the
-  // ZK circuit but never written to the public ledger.
-  // Only the boolean outcome (claim_verified = true) is public.
-  // ----------------------------------------------------------------
-  it('Proves the claim passes when activity_count >= threshold (privacy: count stays private)', async () => {
-    // PRIVATE: the prover has 15 verified activities (≥ threshold of 10)
-    // This value is NOT written to the chain. Only the boolean passes.
-    const PRIVATE_ACTIVITY_COUNT = 15n;
-
-    await (submitCallTx<Contract, 'submit_proof'>)(providers, {
+    const commitment = pureCircuits.bid_commitment(BID_AMOUNT, BID_SALT);
+    await submitCallTx<Contract, 'commit_bid'>(providers, {
       compiledContract: CompiledProofShieldContract,
       contractAddress,
       privateStateId: PRIVATE_STATE_ID,
-      circuitId: 'submit_proof',
-      args: [PRIVATE_ACTIVITY_COUNT],
+      circuitId: 'commit_bid',
+      args: [commitment],
     });
+    expect((await queryLedger()).revealed_bids.size()).toBe(0n);
 
-    const state = await queryLedger(providers);
-    // PUBLIC: the verifier only sees this boolean — not the 15
-    expect(state.claim_verified).toBe(true);
-    // The raw count is NEVER on-chain. We verify it's not accessible:
-    expect((state as any).activity_count).toBeUndefined();
-    logger.info(`Claim verified: ${state.claim_verified} | Threshold: ${state.threshold} | Raw count: PRIVATE`);
-  });
-
-  // ----------------------------------------------------------------
-  // Test 4: Submit a proof that FAILS (count < threshold)
-  // Demonstrates that an insufficient count produces claim_verified = false.
-  // ----------------------------------------------------------------
-  it('Proves the claim fails when activity_count < threshold', async () => {
-    // PRIVATE: the prover only has 5 activities (< threshold of 10)
-    const PRIVATE_ACTIVITY_COUNT = 5n;
-
-    await (submitCallTx<Contract, 'submit_proof'>)(providers, {
+    await submitCallTx<Contract, 'close_bidding'>(providers, {
       compiledContract: CompiledProofShieldContract,
       contractAddress,
       privateStateId: PRIVATE_STATE_ID,
-      circuitId: 'submit_proof',
-      args: [PRIVATE_ACTIVITY_COUNT],
+      circuitId: 'close_bidding',
+      args: [OWNER_SECRET],
     });
-
-    const state = await queryLedger(providers);
-    expect(state.claim_verified).toBe(false);
-    logger.info(`Claim verified: ${state.claim_verified} | Threshold: ${state.threshold} | Raw count: PRIVATE`);
+    await submitCallTx<Contract, 'reveal_bid'>(providers, {
+      compiledContract: CompiledProofShieldContract,
+      contractAddress,
+      privateStateId: PRIVATE_STATE_ID,
+      circuitId: 'reveal_bid',
+      args: [BID_AMOUNT, BID_SALT],
+    });
+    expect((await queryLedger()).highest_bid).toBe(BID_AMOUNT);
+    await submitCallTx<Contract, 'finalize_auction'>(providers, {
+      compiledContract: CompiledProofShieldContract,
+      contractAddress,
+      privateStateId: PRIVATE_STATE_ID,
+      circuitId: 'finalize_auction',
+      args: [OWNER_SECRET],
+    });
+    expect((await queryLedger()).phase).toBe(3);
   });
 });

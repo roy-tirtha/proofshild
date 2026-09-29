@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import pino from 'pino';
-import { deployContract, submitCallTx } from '@midnight-ntwrk/midnight-js-contracts';
+import { deployContract } from '@midnight-ntwrk/midnight-js-contracts';
 import type { EnvironmentConfiguration } from '@midnight-ntwrk/testkit-js';
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import { CompiledProofShieldContract, Contract } from './index.js';
@@ -58,23 +58,9 @@ try {
     initialPrivateState: {},
   });
   const address = deployed.deployTxData.public.contractAddress;
-  const result = { network, contractAddress: address, threshold: 10, initialized: false, deployedAt: new Date().toISOString() };
+  const result = { network, contractAddress: address, phase: 'UNINITIALIZED', deployedAt: new Date().toISOString() };
   await writeFile('deployment.json', `${JSON.stringify(result, null, 2)}\n`, { mode: 0o600 });
-  logger.info({ ...result, file: 'deployment.json' }, 'Contract deployed; initializing shared threshold');
-  const initialized = await submitCallTx<Contract, 'initialise_claim'>(providers, {
-    compiledContract: CompiledProofShieldContract,
-    contractAddress: address,
-    privateStateId: `ProofShield-${network}`,
-    circuitId: 'initialise_claim',
-    args: [10n],
-  });
-  const ready = {
-    ...result,
-    initialized: true,
-    initializationTransactionHash: initialized.public.txHash,
-  };
-  await writeFile('deployment.json', `${JSON.stringify(ready, null, 2)}\n`, { mode: 0o600 });
-  logger.info({ ...ready, file: 'deployment.json' }, 'Shared ProofShield contract is ready');
+  logger.info({ ...result, file: 'deployment.json' }, 'Sealed-auction contract deployed');
 } finally {
   await wallet.stop();
 }

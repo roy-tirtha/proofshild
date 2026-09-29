@@ -6,7 +6,7 @@ import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-pri
 import { type MidnightWalletProvider } from './wallet.js';
 import { type NetworkConfig } from './config.js';
 
-export type ProofShieldCircuits = 'initialise_claim' | 'submit_proof';
+export type ProofShieldCircuits = 'start_auction' | 'commit_bid' | 'close_bidding' | 'reveal_bid' | 'finalize_auction';
 
 export type ProofShieldProviders = MidnightProviders<any>;
 

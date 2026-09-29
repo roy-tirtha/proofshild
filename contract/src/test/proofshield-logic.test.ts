@@ -5,9 +5,12 @@ import {
   dummyContractAddress,
 } from '@midnight-ntwrk/compact-runtime';
 import { ZswapSecretKeys } from '@midnight-ntwrk/midnight-js-protocol/ledger';
-import { Contract, ledger } from '../../managed/proofshield/contract/index.js';
+import { Contract, ledger, pureCircuits } from '../../managed/proofshield/contract/index.js';
 
 const proverKeys = ZswapSecretKeys.fromSeed(new Uint8Array(32));
+const saltA = new Uint8Array(32).fill(7);
+const saltB = new Uint8Array(32).fill(8);
+const ownerSecret = new Uint8Array(32).fill(9);
 
 function newContract() {
   const contract = new Contract({});
@@ -21,70 +24,97 @@ function newContract() {
   return { contract, context };
 }
 
-describe('ProofShield Compact circuit logic', () => {
-  it('starts with no public claim and a zero threshold', () => {
-    const { contract, context } = newContract();
+describe('ProofShield sealed-bid auction circuits', () => {
+  it('starts uninitialized with no commitments or revealed bids', () => {
+    const { contract } = newContract();
     const initial = contract.initialState(createConstructorContext({}, proverKeys.coinPublicKey));
+    const state = ledger(initial.currentContractState.data);
 
-    expect(ledger(initial.currentContractState.data)).toEqual({
-      claim_verified: false,
-      claim_initialized: false,
-      threshold: 0n,
-    });
-    expect(context.currentQueryContext).toBeDefined();
+    expect(state.phase).toBe(0);
+    expect(state.reserve_price).toBe(0n);
+    expect(state.commitments.size()).toBe(0n);
+    expect(state.revealed_bids.size()).toBe(0n);
   });
 
-  it('discloses the configured threshold in public ledger state', () => {
+  it('starts an auction once with a public reserve', () => {
     const { contract, context } = newContract();
-    const result = contract.circuits.initialise_claim(context, 10n);
+    const result = contract.circuits.start_auction(context, 5n, ownerSecret);
 
-    expect(ledger(result.context.currentQueryContext.state)).toEqual({
-      claim_verified: false,
-      claim_initialized: true,
-      threshold: 10n,
-    });
+    expect(ledger(result.context.currentQueryContext.state).phase).toBe(1);
+    expect(ledger(result.context.currentQueryContext.state).reserve_price).toBe(5n);
+    expect(() => contract.circuits.start_auction(result.context, 9n, ownerSecret)).toThrow();
+    expect(() => contract.circuits.start_auction(context, 0n, ownerSecret)).toThrow();
   });
 
-  it('marks a claim verified when the private count meets the threshold', () => {
+  it('accepts opaque bid commitments without recording bid amounts', () => {
     const { contract, context } = newContract();
-    const initialized = contract.circuits.initialise_claim(context, 10n);
-    const result = contract.circuits.submit_proof(initialized.context, 15n);
+    const started = contract.circuits.start_auction(context, 5n, ownerSecret);
+    const commitment = pureCircuits.bid_commitment(42n, saltA);
+    const committed = contract.circuits.commit_bid(started.context, commitment);
+    const state = ledger(committed.context.currentQueryContext.state);
 
-    expect(ledger(result.context.currentQueryContext.state)).toEqual({
-      claim_verified: true,
-      claim_initialized: true,
-      threshold: 10n,
-    });
+    expect(state.commitments.member(commitment)).toBe(true);
+    expect(state.revealed_bids.size()).toBe(0n);
+    expect(state.highest_bid).toBe(0n);
   });
 
-  it('leaves the claim unverified when the private count is below the threshold', () => {
+  it('rejects duplicate commitments and commitments outside the commit phase', () => {
     const { contract, context } = newContract();
-    const initialized = contract.circuits.initialise_claim(context, 10n);
-    const result = contract.circuits.submit_proof(initialized.context, 5n);
+    const started = contract.circuits.start_auction(context, 5n, ownerSecret);
+    const commitment = pureCircuits.bid_commitment(42n, saltA);
+    const committed = contract.circuits.commit_bid(started.context, commitment);
 
-    expect(ledger(result.context.currentQueryContext.state)).toEqual({
-      claim_verified: false,
-      claim_initialized: true,
-      threshold: 10n,
-    });
+    expect(() => contract.circuits.commit_bid(committed.context, commitment)).toThrow();
+    const closed = contract.circuits.close_bidding(committed.context, ownerSecret);
+    expect(() => contract.circuits.commit_bid(closed.context, pureCircuits.bid_commitment(10n, saltB))).toThrow();
+    expect(() => contract.circuits.close_bidding(closed.context, ownerSecret)).toThrow();
+    expect(() => contract.circuits.close_bidding(committed.context, saltB)).toThrow();
   });
 
-  it('rejects attempts to reset an initialized public threshold', () => {
+  it('accepts a matching reveal and updates the public winner only after reveal', () => {
     const { contract, context } = newContract();
-    const initialized = contract.circuits.initialise_claim(context, 10n);
+    const started = contract.circuits.start_auction(context, 5n, ownerSecret);
+    const commitment = pureCircuits.bid_commitment(42n, saltA);
+    const committed = contract.circuits.commit_bid(started.context, commitment);
+    const closed = contract.circuits.close_bidding(committed.context, ownerSecret);
 
-    expect(() => contract.circuits.initialise_claim(initialized.context, 2n)).toThrow();
+    expect(ledger(closed.context.currentQueryContext.state).highest_bid).toBe(0n);
+    const revealed = contract.circuits.reveal_bid(closed.context, 42n, saltA);
+    const state = ledger(revealed.context.currentQueryContext.state);
+    expect(state.revealed_bids.lookup(commitment)).toBe(42n);
+    expect(state.highest_bid).toBe(42n);
+    expect(state.winning_commitment).toEqual(commitment);
+    expect(state.reveal_count).toBe(1n);
   });
 
-  it('rejects a proof before the public threshold is initialized', () => {
+  it('rejects a bid or salt that does not match its commitment', () => {
     const { contract, context } = newContract();
+    const started = contract.circuits.start_auction(context, 5n, ownerSecret);
+    const commitment = pureCircuits.bid_commitment(42n, saltA);
+    const committed = contract.circuits.commit_bid(started.context, commitment);
+    const closed = contract.circuits.close_bidding(committed.context, ownerSecret);
 
-    expect(() => contract.circuits.submit_proof(context, 15n)).toThrow();
+    expect(() => contract.circuits.reveal_bid(closed.context, 41n, saltA)).toThrow();
+    expect(() => contract.circuits.reveal_bid(closed.context, 42n, saltB)).toThrow();
   });
 
-  it('rejects a zero public threshold', () => {
+  it('rejects repeated reveal and only selects bids meeting reserve', () => {
     const { contract, context } = newContract();
+    const started = contract.circuits.start_auction(context, 10n, ownerSecret);
+    const lowBid = pureCircuits.bid_commitment(7n, saltA);
+    const highBid = pureCircuits.bid_commitment(15n, saltB);
+    const lowCommitted = contract.circuits.commit_bid(started.context, lowBid);
+    const highCommitted = contract.circuits.commit_bid(lowCommitted.context, highBid);
+    const closed = contract.circuits.close_bidding(highCommitted.context, ownerSecret);
+    const belowReserve = contract.circuits.reveal_bid(closed.context, 7n, saltA);
 
-    expect(() => contract.circuits.initialise_claim(context, 0n)).toThrow();
+    expect(ledger(belowReserve.context.currentQueryContext.state).highest_bid).toBe(0n);
+    const aboveReserve = contract.circuits.reveal_bid(belowReserve.context, 15n, saltB);
+    expect(ledger(aboveReserve.context.currentQueryContext.state).highest_bid).toBe(15n);
+    expect(() => contract.circuits.reveal_bid(aboveReserve.context, 15n, saltB)).toThrow();
+    const finalized = contract.circuits.finalize_auction(aboveReserve.context, ownerSecret);
+    expect(() => contract.circuits.finalize_auction(aboveReserve.context, saltB)).toThrow();
+    expect(ledger(finalized.context.currentQueryContext.state).phase).toBe(3);
+    expect(() => contract.circuits.reveal_bid(finalized.context, 7n, saltA)).toThrow();
   });
 });

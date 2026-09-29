@@ -15,7 +15,7 @@ const currentDir = path.resolve(new URL(import.meta.url).pathname, '..');
 export const zkConfigPath = path.resolve(currentDir, 'managed', 'proofshield');
 
 export const CompiledProofShieldContract = CompiledContract.make(
-  'ProofShieldContract',
+  'ProofShieldAuction',
   Contract,
 ).pipe(
   CompiledContract.withVacantWitnesses,

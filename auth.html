@@ -297,7 +297,7 @@
       <nav class="nav-pill" aria-label="Main Navigation">
         <a href="index.html" class="nav-link">Home</a>
         <a href="profile.html" class="nav-link">Profile</a>
-        <a href="proof.html" class="nav-link proof-nav-link">Generate proof</a>
+        <a href="auction.html" class="nav-link auction-nav-link">Sealed auction</a>
         <a href="auth.html" class="nav-link account-link active">Sign in</a>
       </nav>
 
@@ -317,7 +317,7 @@
     <nav class="mobile-sheet" aria-label="Mobile Navigation">
       <a href="index.html" class="mobile-nav-link">Home</a>
       <a href="profile.html" class="mobile-nav-link">Profile</a>
-      <a href="proof.html" class="mobile-nav-link proof-nav-link">Generate proof</a>
+      <a href="auction.html" class="mobile-nav-link auction-nav-link">Sealed auction</a>
       <button class="mobile-wallet-connect" type="button" data-wallet-connect>Connect wallet</button>
       <a href="profile.html" class="mobile-sign-in">Profile</a>
     </nav>
@@ -529,8 +529,8 @@
     }
 
     // Handle Google Sign-In
-    const postAuthPath = new URLSearchParams(window.location.search).get('returnTo') === 'proof'
-      ? 'proof.html'
+    const postAuthPath = new URLSearchParams(window.location.search).get('returnTo') === 'auction'
+      ? 'auction.html'
       : 'profile.html';
 
     googleBtn.addEventListener('click', async () => {
