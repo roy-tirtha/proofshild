@@ -297,12 +297,11 @@
       <nav class="nav-pill" aria-label="Main Navigation">
         <a href="index.html" class="nav-link">Home</a>
         <a href="profile.html" class="nav-link">Profile</a>
+        <a href="profile.html#proof-console-heading" class="nav-link proof-nav-link">Generate proof</a>
+        <a href="auth.html" class="nav-link account-link active">Sign in</a>
       </nav>
 
       <button class="sign-in-btn wallet-nav-button" type="button" data-wallet-connect>Connect wallet</button>
-
-      <!-- Sign In indicator -->
-      <a href="profile.html" class="sign-in-btn account-link" style="background: #ffffff; color: #000000; font-weight: 600;">Account</a>
       <span class="wallet-nav-status" data-wallet-status aria-live="polite"></span>
 
       <!-- Mobile Hamburger Button -->
@@ -318,6 +317,7 @@
     <nav class="mobile-sheet" aria-label="Mobile Navigation">
       <a href="index.html" class="mobile-nav-link">Home</a>
       <a href="profile.html" class="mobile-nav-link">Profile</a>
+      <a href="profile.html#proof-console-heading" class="mobile-nav-link proof-nav-link">Generate proof</a>
       <button class="mobile-wallet-connect" type="button" data-wallet-connect>Connect wallet</button>
       <a href="profile.html" class="mobile-sign-in">Profile</a>
     </nav>
@@ -529,6 +529,10 @@
     }
 
     // Handle Google Sign-In
+    const postAuthPath = new URLSearchParams(window.location.search).get('returnTo') === 'proof'
+      ? 'profile.html#proof-console-heading'
+      : 'profile.html';
+
     googleBtn.addEventListener('click', async () => {
       clearAlert();
       googleBtn.disabled = true;
@@ -541,7 +545,7 @@
           credentials: 'include',
           body: JSON.stringify({
             provider: 'google',
-            callbackURL: window.location.origin + '/profile.html',
+            callbackURL: window.location.origin + '/' + postAuthPath,
           }),
         });
 
@@ -587,7 +591,7 @@
         if (res.ok) {
           showAlert('Signed in successfully! Redirecting...', 'success');
           setTimeout(() => {
-            window.location.href = 'profile.html';
+            window.location.href = postAuthPath;
           }, 800);
         } else {
           showAlert(result.message || 'Invalid credentials or user not registered.', 'error');
@@ -632,7 +636,7 @@
         if (res.ok) {
           showAlert('Registration successful! User saved to database.', 'success');
           setTimeout(() => {
-            window.location.href = 'profile.html';
+            window.location.href = postAuthPath;
           }, 1000);
         } else {
           showAlert(result.message || 'Registration failed.', 'error');

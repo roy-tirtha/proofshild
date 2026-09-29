@@ -208,7 +208,8 @@ async function initializeProfile() {
   const response = await fetch('/api/auth/get-session', { credentials: 'include' });
   const session = response.ok ? await response.json() : null;
   if (!session?.user) {
-    window.location.replace('auth.html?returnTo=profile');
+    const nextPage = window.location.hash === '#proof-console-heading' ? 'proof' : 'profile';
+    window.location.replace(`auth.html?returnTo=${nextPage}`);
     return;
   }
 
@@ -219,6 +220,9 @@ async function initializeProfile() {
   byId('profile-created').textContent = formatDate(user.createdAt);
   byId('profile-loading').hidden = true;
   byId('profile-view').hidden = false;
+  if (window.location.hash === '#proof-console-heading') {
+    requestAnimationFrame(() => byId('proof-console-heading').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }
 
   const results = await Promise.allSettled([loadWallets(), loadProofHistory()]);
   if (results[0].status === 'rejected') addEmptyMessage(byId('wallet-list'), results[0].reason.message);

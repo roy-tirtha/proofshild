@@ -13,6 +13,7 @@
     .profile-page { min-height: 100vh; padding: 22px clamp(16px, 4vw, 48px) 64px; }
     .profile-header { margin: 0 auto 44px; }
     .profile-content { width: min(100%, 920px); margin: 0 auto; }
+    #proof-console-heading { scroll-margin-top: 24px; }
     .profile-heading { margin-bottom: 24px; }
     .profile-heading h1 { font-size: clamp(30px, 5vw, 44px); letter-spacing: -0.04em; }
     .profile-heading p { color: #aab3c2; margin-top: 8px; line-height: 1.6; }
@@ -58,6 +59,8 @@
       <nav class="nav-pill" aria-label="Main Navigation">
         <a href="index.html" class="nav-link">Home</a>
         <a href="profile.html" class="nav-link active">Profile</a>
+        <a href="#proof-console-heading" class="nav-link proof-nav-link">Generate proof</a>
+        <a href="auth.html" class="nav-link account-link">Sign in</a>
       </nav>
       <button class="sign-in-btn wallet-nav-button" type="button" data-wallet-connect>Connect wallet</button>
       <span class="wallet-nav-status" data-wallet-status aria-live="polite"></span>
@@ -69,6 +72,8 @@
     <nav class="mobile-sheet" aria-label="Mobile Navigation">
       <a href="index.html" class="mobile-nav-link">Home</a>
       <a href="profile.html" class="mobile-nav-link active">Profile</a>
+      <a href="#proof-console-heading" class="mobile-nav-link proof-nav-link">Generate proof</a>
+      <a href="auth.html" class="mobile-sign-in">Sign in</a>
       <button class="mobile-wallet-connect" type="button" data-wallet-connect>Connect wallet</button>
     </nav>
 
