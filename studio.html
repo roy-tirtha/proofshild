@@ -616,6 +616,11 @@
           </span>
         </div>
 
+        <p style="margin: 0 0 12px; color: #94a3b8; font-size: 12px;">
+          Deployed contract address:
+          <code id="deployed-contract-address" style="color: #4ade80;">Not configured</code>
+        </p>
+
         <div class="code-editor"><span class="c-cm">// ProofShield: Privacy-Preserving Merit Verification on Midnight</span>
 <span class="c-kw">pragma</span> language_version &gt;= <span class="c-num">0.20</span>;
 
@@ -653,7 +658,12 @@
     const walletChoice = document.getElementById('wallet-choice');
     const status = document.getElementById('lace-status');
     const terminal = document.getElementById('terminal-box');
+    const contractAddress = document.getElementById('deployed-contract-address');
     let connectedApi;
+
+    if (import.meta.env.VITE_CONTRACT_ADDRESS) {
+      contractAddress.textContent = import.meta.env.VITE_CONTRACT_ADDRESS;
+    }
 
     connectButton.addEventListener('click', async () => {
       try {

@@ -1,0 +1,13 @@
+{
+  "framework": "vite",
+  "installCommand": "yarn install --frozen-lockfile",
+  "buildCommand": "yarn build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/studio", "destination": "/studio.html" },
+    { "source": "/product", "destination": "/product.html" },
+    { "source": "/case-studies", "destination": "/case-studies.html" },
+    { "source": "/contact", "destination": "/contact.html" },
+    { "source": "/auth", "destination": "/auth.html" }
+  ]
+}

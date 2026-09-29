@@ -126,6 +126,15 @@ Preprod when prompted and approve the connection. Fund the wallet and ensure
 DUST is available before any future transaction flow. Never enter a wallet
 seed or mnemonic into the web app.
 
+### Vercel static demo
+
+Import this public GitHub repository into Vercel with the root directory set
+to `.`. `vercel.json` configures `yarn install --frozen-lockfile`, `yarn build`,
+and `dist`; no secrets or environment variables are required for the static
+demo. The UI's auth API and Midnight transaction submission are not hosted by
+this static deployment. Deploy `server/` separately if you need authentication.
+After deploying, test `/studio` and connect Lace or 1AM on Preprod.
+
 ---
 
 ## Compile
@@ -205,6 +214,17 @@ MIDNIGHT_NETWORK=preprod yarn deploy
 The helper prints the address returned by `deployContract` and saves it in the
 ignored `deployment.json`. Set `VITE_CONTRACT_ADDRESS` to that value before
 building the frontend to display it. Never commit wallet secrets.
+
+To generate a Preprod contract address yourself:
+
+1. Install and verify the Compact CLI from the [Midnight downloads page](https://midnight.network/download); `compact --version` must match this project's compiler version (`0.23` language).
+2. Copy `.env.preprod.example` to `.env.preprod`; set exactly one of `MIDNIGHT_PREPROD_MNEMONIC` or `MIDNIGHT_PREPROD_SEED`. Keep this file private and never paste a wallet secret into the browser or GitHub.
+3. Fund that wallet for Preprod transactions and ensure it has registered DUST using the Preprod faucet linked in the env template. Wait until funding is reflected on-chain.
+4. Run `yarn install`, `yarn compile`, then `MIDNIGHT_NETWORK=preprod yarn deploy` from the repository root. The helper waits for wallet sync and prints the resulting address in the final log entry.
+5. Save the printed address; `deployment.json` is also written locally and ignored by Git. For a Vercel UI banner, add `VITE_CONTRACT_ADDRESS` with that public address in Vercel's project environment settings and redeploy. The address is safe to publish; wallet seed/mnemonic is not.
+
+Deployment submits an on-chain transaction and requires a funded wallet; this
+repository does not deploy automatically during Vercel builds.
 
 ### Deployed contract address
 
