@@ -15,9 +15,6 @@
   --pill-dark: #28282a;
   --sign-in-text: #c8c8c8;
   --nav-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
-  --trust-bg: #28282a;
-  --trust-border: rgba(255, 255, 255, 0.4);
-  --trust-text: #c4c2c3;
   --font-sans: "Inter", "Segoe UI", system-ui, sans-serif;
   --font-display: "BubbledotICG-FinePos", "Geist Pixel Circle", monospace;
 }
@@ -423,87 +420,6 @@ header.site-header {
   z-index: 1;
 }
 
-/* Trust Row */
-.trust-row {
-  display: inline-flex;
-  align-items: center;
-  --trust-size: clamp(36px, 4.5vw, 42px);
-  margin-bottom: clamp(16px, 2.5vh, 26px);
-}
-
-.avatar-ring {
-  width: var(--trust-size);
-  height: var(--trust-size);
-  background: var(--trust-bg);
-  border: 1px solid var(--trust-border);
-  border-radius: 50%;
-  padding: 5px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.35s ease;
-  position: relative;
-}
-
-.avatar-inner {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.avatar-inner i {
-  color: #111111;
-  font-size: calc(var(--trust-size) * 0.34);
-}
-
-.avatar-ring.a1 {
-  z-index: 1;
-}
-
-.avatar-ring.a2 {
-  margin-left: calc(var(--trust-size) * -0.42);
-  z-index: 2;
-}
-
-.avatar-ring.a3 {
-  margin-left: calc(var(--trust-size) * -0.42);
-  z-index: 4;
-}
-
-.avatar-ring.a1:hover {
-  transform: translateY(-2px);
-}
-
-.avatar-ring.a2:hover {
-  transform: translateY(-4px);
-}
-
-.avatar-ring.a3:hover {
-  transform: translateY(-2px);
-}
-
-.trust-pill {
-  height: var(--trust-size);
-  background: var(--trust-bg);
-  border: 1px solid var(--trust-border);
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  margin-left: calc(var(--trust-size) * -0.42);
-  padding-left: calc(var(--trust-size) * 0.58);
-  padding-right: clamp(14px, 2vw, 20px);
-  color: var(--trust-text);
-  font-family: var(--font-sans);
-  font-weight: 500;
-  font-size: clamp(12px, 1.4vw, 13.5px);
-  white-space: nowrap;
-  z-index: 3;
-}
-
 /* Headline */
 .headline {
   font-family: var(--font-display);
@@ -511,8 +427,7 @@ header.site-header {
   font-size: clamp(28px, 6.2vw, 80px);
   letter-spacing: -0.04em;
   line-height: 1.12;
-  white-space: nowrap;
-  overflow: hidden;
+  white-space: normal;
   text-transform: none;
 }
 
@@ -575,54 +490,6 @@ header.site-header {
 .cta-btn:hover {
   transform: translateY(-2px) scale(1.02);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25), 0 0 28px rgba(255, 255, 255, 0.48), 0 0 54px rgba(255, 255, 255, 0.22);
-}
-
-/* 3) Stats Footer */
-.stats-footer {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: clamp(12px, 2.5vw, 36px);
-  max-width: 920px;
-  width: 100%;
-  flex-shrink: 0;
-  padding-top: clamp(8px, 1.5vh, 16px);
-  z-index: 1;
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.stat-icon {
-  font-family: var(--font-display);
-  color: #ffffff;
-  font-size: clamp(22px, 3vw, 33px);
-  line-height: 1;
-  margin-bottom: 4px;
-}
-
-.stat-val-wrap {
-  font-family: var(--font-sans);
-  color: #ffffff;
-  font-size: clamp(18px, 2.2vw, 26px);
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.2;
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-}
-
-.stat-label {
-  color: var(--muted);
-  font-size: clamp(11px, 1.2vw, 12.5px);
-  font-weight: 400;
-  margin-top: 2px;
-  line-height: 1.3;
 }
 
 /* Shared Animations */
@@ -709,10 +576,6 @@ header.site-header {
     line-height: 1.05;
   }
 
-  .stats-footer {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px 20px;
-  }
 }
 
 @media (max-width: 420px) {
@@ -721,23 +584,10 @@ header.site-header {
     line-height: 1.04;
   }
 
-  .trust-row {
-    --trust-size: 34px;
-  }
-
-  .trust-pill {
-    font-size: 12px;
-  }
 }
 
 @media (max-height: 700px) {
-  .trust-row {
-    margin-bottom: 12px;
-  }
   .subhead {
     margin: 10px auto;
-  }
-  .stats-footer {
-    padding-top: 6px;
   }
 }

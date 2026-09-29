@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Authentication &amp; Access — Intelligence Designed To Evolve</title>
+  <title>Sign In — ProofShield</title>
 
   <!-- Google Fonts: Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -295,17 +295,13 @@
       <!-- Desktop Nav Pill -->
       <nav class="nav-pill" aria-label="Main Navigation">
         <a href="index.html" class="nav-link">Home</a>
-        <a href="product.html" class="nav-link">Product</a>
-        <a href="case-studies.html" class="nav-link">Case Studies</a>
-        <a href="contact.html" class="nav-link">Contact</a>
+        <a href="profile.html" class="nav-link">Profile</a>
       </nav>
 
       <button class="sign-in-btn wallet-nav-button" type="button" data-wallet-connect>Connect wallet</button>
 
       <!-- Sign In indicator -->
-      <a href="auth.html" class="sign-in-btn active" style="background: #ffffff; color: #000000; font-weight: 600;">
-        <i class="fa-solid fa-user-shield" style="margin-right: 4px;"></i> Auth
-      </a>
+      <a href="profile.html" class="sign-in-btn account-link" style="background: #ffffff; color: #000000; font-weight: 600;">Profile</a>
       <span class="wallet-nav-status" data-wallet-status aria-live="polite"></span>
 
       <!-- Mobile Hamburger Button -->
@@ -320,11 +316,9 @@
     <div class="mobile-overlay"></div>
     <nav class="mobile-sheet" aria-label="Mobile Navigation">
       <a href="index.html" class="mobile-nav-link">Home</a>
-      <a href="product.html" class="mobile-nav-link">Product</a>
-      <a href="case-studies.html" class="mobile-nav-link">Case Studies</a>
-      <a href="contact.html" class="mobile-nav-link">Contact</a>
+      <a href="profile.html" class="mobile-nav-link">Profile</a>
       <button class="mobile-wallet-connect" type="button" data-wallet-connect>Connect wallet</button>
-      <a href="studio.html" class="mobile-sign-in">Launch Studio</a>
+      <a href="profile.html" class="mobile-sign-in">Profile</a>
     </nav>
 
     <!-- Auth Card -->
@@ -364,7 +358,7 @@
         <form id="signin-form">
           <div class="form-group">
             <label class="form-label" for="signin-email">Email Address</label>
-            <input class="form-input" id="signin-email" type="email" placeholder="sarah.lin@enterprise.com" required />
+            <input class="form-input" id="signin-email" type="email" placeholder="you@example.com" required />
           </div>
           <div class="form-group">
             <label class="form-label" for="signin-password">Password</label>
@@ -384,11 +378,11 @@
           </div>
           <div class="form-group">
             <label class="form-label" for="reg-email">Email Address *</label>
-            <input class="form-input" id="reg-email" type="email" placeholder="sarah.lin@enterprise.com" required />
+            <input class="form-input" id="reg-email" type="email" placeholder="you@example.com" required />
           </div>
           <div class="form-group">
             <label class="form-label" for="reg-org">Organization / Firm</label>
-            <input class="form-input" id="reg-org" type="text" placeholder="Apex Quantitative Capital" />
+            <input class="form-input" id="reg-org" type="text" placeholder="Optional" />
           </div>
           <div class="form-group">
             <label class="form-label" for="reg-password">Password * (min 8 chars)</label>
@@ -413,13 +407,12 @@
         <h2 style="font-size: 20px; font-weight: 600; color: #ffffff; margin-bottom: 4px;" id="user-name">User Name</h2>
         <p style="font-size: 13.5px; color: #8e8e8e; margin-bottom: 8px;" id="user-email">user@domain.com</p>
         <div style="display: inline-block; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: #93c5fd; padding: 4px 12px; border-radius: 999px; font-size: 12px; margin-bottom: 24px;" id="user-org">
-          Independent Researcher
+          Not provided
         </div>
 
         <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
-          <a href="studio.html" class="submit-btn" style="flex: 1; text-decoration: none;">
-            <i class="fa-solid fa-bolt"></i>
-            <span>Open ProofStudio</span>
+          <a href="profile.html" class="submit-btn" style="flex: 1; text-decoration: none;">
+            <span>Open profile</span>
           </a>
           <button id="signout-btn" class="submit-btn" style="background: rgba(255, 255, 255, 0.1); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: none;">
             <i class="fa-solid fa-arrow-right-from-bracket"></i>
@@ -474,7 +467,7 @@
       signinForm.style.display = 'block';
       registerForm.style.display = 'none';
       authHeading.textContent = 'Sign in to ProofShield';
-      authSubheading.textContent = 'Authenticate using Google OAuth or your registered email credentials.';
+      authSubheading.textContent = 'Sign in with Google or your email and password.';
       clearAlert();
     });
 
@@ -484,7 +477,7 @@
       signinForm.style.display = 'none';
       registerForm.style.display = 'block';
       authHeading.textContent = 'Create New Account';
-      authSubheading.textContent = 'Register a new enterprise user. Profile will be persisted to MongoDB Atlas.';
+      authSubheading.textContent = 'Create an account to save your profile, wallets, and transaction records.';
       clearAlert();
     });
 
@@ -499,7 +492,7 @@
             mongoStatusText.textContent = `MongoDB Atlas: Connected (${data.auth.mongo.dbName})`;
           } else {
             mongoStatusDot.className = 'status-dot amber';
-            mongoStatusText.textContent = 'MongoDB: In-Memory (Set MONGODB_URI in .env)';
+            mongoStatusText.textContent = 'MongoDB Atlas: unavailable';
           }
         }
         if (data.auth) {
@@ -523,7 +516,7 @@
             loggedInView.style.display = 'block';
             document.getElementById('user-name').textContent = session.user.name || 'ProofShield User';
             document.getElementById('user-email').textContent = session.user.email || '';
-            document.getElementById('user-org').textContent = session.user.organization || 'Enterprise Security Analyst';
+            document.getElementById('user-org').textContent = session.user.organization || 'Not provided';
             return;
           }
         }
@@ -547,7 +540,7 @@
           credentials: 'include',
           body: JSON.stringify({
             provider: 'google',
-            callbackURL: window.location.origin + '/studio.html',
+            callbackURL: window.location.origin + '/profile.html',
           }),
         });
 
@@ -593,7 +586,7 @@
         if (res.ok) {
           showAlert('Signed in successfully! Redirecting...', 'success');
           setTimeout(() => {
-            window.location.href = 'studio.html';
+            window.location.href = 'profile.html';
           }, 800);
         } else {
           showAlert(result.message || 'Invalid credentials or user not registered.', 'error');
@@ -613,7 +606,7 @@
       clearAlert();
       const name = document.getElementById('reg-name').value.trim();
       const email = document.getElementById('reg-email').value.trim();
-      const organization = document.getElementById('reg-org').value.trim() || 'Independent Analyst';
+      const organization = document.getElementById('reg-org').value.trim();
       const password = document.getElementById('reg-password').value;
       const confirm = document.getElementById('reg-confirm').value;
       const btn = document.getElementById('register-submit-btn');
@@ -638,7 +631,7 @@
         if (res.ok) {
           showAlert('Registration successful! User saved to database.', 'success');
           setTimeout(() => {
-            window.location.href = 'studio.html';
+            window.location.href = 'profile.html';
           }, 1000);
         } else {
           showAlert(result.message || 'Registration failed.', 'error');

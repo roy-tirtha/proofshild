@@ -15,7 +15,7 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      input: ['index.html', 'studio.html', 'product.html', 'case-studies.html', 'contact.html', 'auth.html'],
+      input: ['index.html', 'auth.html', 'profile.html'],
     },
   },
 })

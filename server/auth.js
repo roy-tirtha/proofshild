@@ -60,7 +60,6 @@ export const auth = betterAuth({
       organization: {
         type: 'string',
         required: false,
-        defaultValue: 'Independent Researcher',
       },
     },
   },

@@ -18,16 +18,17 @@ ProofShield lets technical candidates prove a narrow qualification, such as meet
 
 ## Level 1 — New Moon (Current Scope)
 
-This repository contains the ProofShield Compact contract, generated artifacts,
-local integration tests, a deployment helper, Lace/1AM wallet connection, and
-MongoDB-backed auth/profile APIs. Browser contract calls and a published
-Preprod deployment are not yet available.
+This repository contains the ProofShield landing page, sign-in/registration,
+authenticated profile, Compact contract artifacts, and MongoDB-backed APIs.
+The profile reads account and linked-wallet data from the app APIs, and can
+request recent transactions directly from a connected Lace or 1AM wallet.
+Contract proving/submission is not currently wired into the browser.
 
 **What Level 1 includes:**
 - Compact source with two circuits and generated proving/verifying artifacts
 - Local Midnight integration tests for deploy, threshold initialization, and passing/failing proofs
 - A helper to deploy to Preview or Preprod and save the returned address
-- Lace and 1AM DApp Connector wallet connect/disconnect in the Studio
+- Lace and 1AM DApp Connector wallet connection from the navigation bar
 - MongoDB Atlas persistence for email/Google accounts and linked wallet addresses
 - Authenticated, privacy-minimized proof transaction record API
 - GitHub Actions workflow for compilation, frontend build, and generated-circuit logic tests
@@ -87,8 +88,8 @@ client-reported association, not a server-verified cryptographic ownership
 signature. Proof
 records are restricted to transaction hash, circuit, contract, public
 threshold, and public pass/fail result. Raw activity counts, private witnesses,
-wallet secrets, and serialized proof payloads are not stored. The Studio does
-not yet submit circuits, so proof records will remain empty until real on-chain
+wallet secrets, and serialized proof payloads are not stored. The web app does
+not yet submit circuits, so proof records remain empty until real on-chain
 calls are implemented. Because wallet addresses and transaction hashes are
 linked to account IDs, the ProofShield backend/database operator can associate
 those public chain artifacts with the user's account. The Compact circuit does
@@ -128,9 +129,11 @@ docker compose up -d --wait node indexer proof-server
 
 ## Launch Interactive Web UI
 
-Run Vite and open `/studio.html` to use the Lace connection panel. Proof
-submission and on-chain verification remain disabled until the browser
-Midnight.js transaction adapter is implemented and a contract is deployed.
+Run the API server and Vite, then use the landing page, authentication page,
+and signed-in profile. The profile displays linked wallet addresses and loads
+recent wallet transactions after a wallet is connected. Proof transaction
+records are shown only if they exist in the database; browser proof submission
+is not implemented yet.
 
 ```bash
 # Launch development server:
@@ -139,14 +142,11 @@ yarn dev
 npm run dev
 ```
 
-Open **`http://localhost:5173/studio.html`** in a browser with Lace or 1AM
-installed. If both are available, choose one in the wallet selector. Select
-Preprod when prompted and approve the connection. Fund the wallet and ensure
-DUST is available before any future transaction flow. Never enter a wallet
-seed or mnemonic into the web app. For authentication, run `yarn start` in a
-second terminal; Vite proxies `/api` to Express. Open the app at
-`http://localhost:5173/auth.html` (use `localhost`, not `127.0.0.1`, so OAuth
-cookies and redirect origins match).
+Open **`http://localhost:5173/`**. Create an account or sign in at
+`http://localhost:5173/auth.html`. After signing in, open
+`http://localhost:5173/profile.html`. Install Lace or 1AM to connect a Preprod
+wallet from the navbar. Never enter a wallet seed or mnemonic into the web app.
+Vite proxies `/api` to the Express server.
 
 ### Vercel demo and API
 
@@ -279,11 +279,11 @@ repository does not deploy automatically during Vercel builds.
 
 ```
 midnight-risin/
-├── src/                             ← Web UI Application (React + Vite + Tailwind)
-│   ├── App.tsx                      ← Interactive ZK Studio & Verifier Portal
-│   ├── main.tsx                     ← React entry point
-│   ├── index.css                    ← Cryptographic design tokens & styling
-│   └── assets/
+├── index.html                       ← Landing page
+├── auth.html                        ← Sign-in and registration
+├── profile.html                     ← Account, wallets, transaction history
+├── profile.js                      ← Authenticated profile data loader
+├── wallet-navbar.js                ← Lace/1AM wallet integration
 ├── contract/                        ← Midnight Smart Contract Workspace
 │   ├── proofshield.compact          ← The Compact smart contract (source of truth)
 │   ├── index.ts                     ← TypeScript entry point for compiled contract

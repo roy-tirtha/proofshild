@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const disconnect = () => {
+    window.dispatchEvent(new CustomEvent('proofshield:wallet-disconnected'));
     connectedApi = undefined;
     connectedName = undefined;
     connectedAddress = undefined;
@@ -54,6 +55,9 @@ document.addEventListener('DOMContentLoaded', () => {
       connectedApi = api;
       connectedName = wallet.name;
       connectedAddress = unshieldedAddress;
+      window.dispatchEvent(new CustomEvent('proofshield:wallet-connected', {
+        detail: { api, address: unshieldedAddress, name: wallet.name, network: 'preprod' },
+      }));
       updateButtons(`${wallet.name} connected on Preprod.`);
 
       try {

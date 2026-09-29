@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#080b12" />
+  <title>Your Profile — ProofShield</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <style>
+    body { background: radial-gradient(ellipse at 50% -15%, #172137 0, #080b12 55%); }
+    .profile-page { min-height: 100vh; padding: 22px clamp(16px, 4vw, 48px) 64px; }
+    .profile-header { margin: 0 auto 44px; }
+    .profile-content { width: min(100%, 920px); margin: 0 auto; }
+    .profile-heading { margin-bottom: 24px; }
+    .profile-heading h1 { font-size: clamp(30px, 5vw, 44px); letter-spacing: -0.04em; }
+    .profile-heading p { color: #aab3c2; margin-top: 8px; line-height: 1.6; }
+    .profile-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .profile-card { min-width: 0; border: 1px solid #283246; border-radius: 18px; background: rgba(13, 19, 31, .88); padding: 22px; }
+    .profile-card h2 { font-size: 17px; margin-bottom: 16px; }
+    .profile-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .profile-field small, .wallet-item small { display: block; color: #8e9aab; margin-bottom: 6px; }
+    .profile-field strong { overflow-wrap: anywhere; font-size: 14px; font-weight: 500; }
+    .profile-section-wide { grid-column: 1 / -1; }
+    .profile-list { display: grid; gap: 10px; }
+    .wallet-item, .history-item { border: 1px solid #263043; border-radius: 12px; padding: 13px 14px; background: #0a0f19; }
+    .wallet-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .wallet-address { display: block; overflow-wrap: anywhere; font-family: ui-monospace, monospace; font-size: 12px; color: #d7e0ee; }
+    .history-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; }
+    .history-item small { color: #95a1b2; }
+    .history-item code { grid-column: 1 / -1; overflow-wrap: anywhere; color: #9db8ff; font-size: 11px; }
+    .profile-muted, .profile-message { color: #9aa6b6; font-size: 13px; line-height: 1.6; }
+    .profile-message { margin: 12px 0 0; }
+    .profile-button { border: 1px solid #39455b; border-radius: 9px; background: #182237; color: #f4f7fb; padding: 8px 11px; cursor: pointer; white-space: nowrap; }
+    .profile-button:hover { background: #22304a; }
+    .profile-actions { display: flex; justify-content: flex-end; margin: 28px 0; }
+    .profile-loading { color: #aab3c2; padding: 36px 0; text-align: center; }
+    [hidden] { display: none !important; }
+    @media (max-width: 720px) {
+      .profile-grid, .profile-fields { grid-template-columns: 1fr; }
+      .profile-section-wide { grid-column: auto; }
+      .profile-header { margin-bottom: 32px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="profile-page">
+    <header class="site-header profile-header">
+      <a href="index.html" class="logo-btn" aria-label="ProofShield home"><img src="assets/logo.webp" alt="" width="52" height="52" /></a>
+      <nav class="nav-pill" aria-label="Main Navigation">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="profile.html" class="nav-link active">Profile</a>
+      </nav>
+      <button class="sign-in-btn wallet-nav-button" type="button" data-wallet-connect>Connect wallet</button>
+      <span class="wallet-nav-status" data-wallet-status aria-live="polite"></span>
+      <button class="mobile-burger" aria-label="Toggle Menu" aria-expanded="false">
+        <span class="burger-bar"></span><span class="burger-bar"></span><span class="burger-bar"></span>
+      </button>
+    </header>
+    <div class="mobile-overlay"></div>
+    <nav class="mobile-sheet" aria-label="Mobile Navigation">
+      <a href="index.html" class="mobile-nav-link">Home</a>
+      <a href="profile.html" class="mobile-nav-link active">Profile</a>
+      <button class="mobile-wallet-connect" type="button" data-wallet-connect>Connect wallet</button>
+    </nav>
+
+    <main class="profile-content">
+      <div id="profile-loading" class="profile-loading" role="status">Loading your profile…</div>
+      <div id="profile-view" hidden>
+        <div class="profile-heading">
+          <h1>Your profile</h1>
+          <p>Account information, linked Midnight wallets, and transaction history.</p>
+        </div>
+        <div class="profile-grid">
+          <section class="profile-card profile-section-wide" aria-labelledby="account-heading">
+            <h2 id="account-heading">Account</h2>
+            <div class="profile-fields">
+              <div class="profile-field"><small>Name</small><strong id="profile-name">—</strong></div>
+              <div class="profile-field"><small>Email</small><strong id="profile-email">—</strong></div>
+              <div class="profile-field"><small>Organization</small><strong id="profile-organization">Not provided</strong></div>
+              <div class="profile-field"><small>Member since</small><strong id="profile-created">—</strong></div>
+            </div>
+          </section>
+          <section class="profile-card" aria-labelledby="wallet-heading">
+            <h2 id="wallet-heading">Linked wallets</h2>
+            <div id="wallet-list" class="profile-list"><p class="profile-muted">Loading linked wallets…</p></div>
+            <p id="wallet-message" class="profile-message">Connect a wallet from the navbar to link it to your profile.</p>
+          </section>
+          <section class="profile-card" aria-labelledby="chain-history-heading">
+            <h2 id="chain-history-heading">Wallet transaction history</h2>
+            <div id="chain-history" class="profile-list"><p class="profile-muted">Connect your wallet to load its recent transactions from Midnight.</p></div>
+          </section>
+          <section class="profile-card profile-section-wide" aria-labelledby="proof-history-heading">
+            <h2 id="proof-history-heading">Proof transaction records</h2>
+            <div id="proof-history" class="profile-list"><p class="profile-muted">Loading transaction records…</p></div>
+          </section>
+        </div>
+        <div class="profile-actions"><button id="profile-signout" class="profile-button" type="button">Sign out</button></div>
+      </div>
+      <p id="profile-error" class="profile-message" role="alert" hidden></p>
+    </main>
+  </div>
+  <script type="module" src="main.js"></script>
+  <script type="module" src="profile.js"></script>
+</body>
+</html>
