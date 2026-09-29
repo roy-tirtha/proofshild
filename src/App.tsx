@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { ConnectedAPI, InitialAPI } from '@midnight-ntwrk/dapp-connector-api';
 import {
   Shield,
   ShieldCheck,
@@ -8,12 +9,9 @@ import {
   Cpu,
   Terminal,
   CheckCircle2,
-  AlertCircle,
   Copy,
   Check,
-  RefreshCw,
   Sliders,
-  Sparkles,
   Search,
   FileCode,
   Award
@@ -30,34 +28,48 @@ interface ClaimState {
   kValue: number;
 }
 
+interface WalletChoice {
+  id: string;
+  api: InitialAPI;
+}
+
 export function App() {
   const [activeTab, setActiveTab] = useState<'studio' | 'verifier' | 'architecture' | 'level1'>('studio');
   const [network, setNetwork] = useState<'local' | 'preprod' | 'preview'>('local');
   const [copied, setCopied] = useState(false);
   const [selectedAdapter, setSelectedAdapter] = useState<'github' | 'htb' | 'thm'>('github');
   const [showRawEvidence, setShowRawEvidence] = useState(false);
+  const [walletChoices, setWalletChoices] = useState<WalletChoice[]>([]);
+  const [connectedWallet, setConnectedWallet] = useState<{ api: ConnectedAPI; address: string; name: string } | null>(null);
+  const [walletError, setWalletError] = useState<string | null>(null);
 
   // Contract interactive state
-  const [thresholdInput, setThresholdInput] = useState<number>(10);
-  const [activityCountInput, setActivityCountInput] = useState<number>(15);
-  const [isProving, setIsProving] = useState(false);
-  const [provingStep, setProvingStep] = useState<string>('');
-  const [provingProgress, setProvingProgress] = useState<number>(0);
+  const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS ?? '';
+  const contractState: ClaimState = {
+    threshold: 0, activityCount: 0, isVerified: null, hasInitialised: false,
+    txHash: null, timestamp: null, circuitRows: 0, kValue: 0
+  };
+  const aliceAddress = connectedWallet?.address ?? 'Connect a Lace wallet to display your address';
 
-  // Deployed state representation
-  const [contractState, setContractState] = useState<ClaimState>({
-    threshold: 10,
-    activityCount: 15,
-    isVerified: true,
-    hasInitialised: true,
-    txHash: '0x8f4c3912da77e6201abef592cb91104e1c2a07c3924f08e7',
-    timestamp: new Date().toLocaleTimeString(),
-    circuitRows: 123,
-    kValue: 9
-  });
+  const connectWallet = async (wallet: InitialAPI) => {
+    setWalletError(null);
+    try {
+      const api = await wallet.connect(network === 'local' ? 'undeployed' : network);
+      const [{ unshieldedAddress }, status] = await Promise.all([
+        api.getUnshieldedAddress(), api.getConnectionStatus()
+      ]);
+      if (status.status !== 'connected') throw new Error('Wallet connection was not established.');
+      setConnectedWallet({ api, address: unshieldedAddress, name: wallet.name });
+    } catch (error) {
+      setWalletError(error instanceof Error ? error.message : 'Could not connect wallet.');
+    }
+  };
 
-  const contractAddress = 'bba6579743ae23b44301d4a9f8df30dbd5244d63a59d8fbc2c9fc7ea521a04f8';
-  const aliceAddress = '0x0000000000000000000000000000000000000001 (Alice Testnet)';
+  const discoverWallets = () => {
+    const choices = Object.entries(window.midnight ?? {}).map(([id, api]) => ({ id, api }));
+    setWalletChoices(choices);
+    setWalletError(choices.length ? null : 'No Midnight wallet found. Install or enable Lace, then refresh.');
+  };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -65,44 +77,7 @@ export function App() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Simulates the full ZK proof generation pipeline through Compact circuits & Proof Server
-  const handleGenerateProof = () => {
-    setIsProving(true);
-    setProvingProgress(10);
-    setProvingStep('Fetching public SRS parameters for k=9 circuit...');
-
-    setTimeout(() => {
-      setProvingProgress(30);
-      setProvingStep('Querying Midnight Proof Server on localhost:6300...');
-    }, 600);
-
-    setTimeout(() => {
-      setProvingProgress(55);
-      setProvingStep('Synthesizing ZK-SNARK witness for submit_proof(activity_count)...');
-    }, 1200);
-
-    setTimeout(() => {
-      setProvingProgress(80);
-      setProvingStep('Constructing balanced transaction with Zswap secret keys...');
-    }, 1800);
-
-    setTimeout(() => {
-      setProvingProgress(100);
-      const passed = activityCountInput >= thresholdInput;
-      setContractState({
-        threshold: thresholdInput,
-        activityCount: activityCountInput,
-        isVerified: passed,
-        hasInitialised: true,
-        txHash: '0x' + Array.from({ length: 48 }, () => Math.floor(Math.random() * 16).toString(16)).join(''),
-        timestamp: new Date().toLocaleTimeString(),
-        circuitRows: 123,
-        kValue: 9
-      });
-      setIsProving(false);
-      setProvingStep('');
-    }, 2400);
-  };
+  const disconnectWallet = () => setConnectedWallet(null);
 
   return (
     <div className="min-h-screen bg-[#07090e] text-[#e2e8f0] font-sans antialiased flex flex-col selection:bg-[#10b981]/30 selection:text-white">
@@ -127,11 +102,10 @@ export function App() {
           </div>
 
           <div className="hidden md:flex items-center space-x-4">
-            {/* Proof Server telemetry badge */}
             <div className="flex items-center space-x-2 bg-[#131929] border border-[#222e47] px-3 py-1.5 rounded-lg text-xs font-mono">
-              <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse"></span>
-              <span className="text-[#94a3b8]">Proof Server:</span>
-              <span className="text-white font-medium">:6300 (Docker Up)</span>
+              <span className={`w-2 h-2 rounded-full ${connectedWallet ? 'bg-[#10b981]' : 'bg-amber-400'}`}></span>
+              <span className="text-[#94a3b8]">Wallet:</span>
+              <span className="text-white font-medium">{connectedWallet?.name ?? 'Disconnected'}</span>
             </div>
 
             {/* Network Selector */}
@@ -153,16 +127,31 @@ export function App() {
 
             {/* Contract Address Pill */}
             <button
-              onClick={() => copyToClipboard(contractAddress)}
+              disabled={!contractAddress}
+              onClick={() => contractAddress && copyToClipboard(contractAddress)}
               className="flex items-center space-x-1.5 bg-[#131929] hover:bg-[#1a2338] border border-[#222e47] px-3 py-1.5 rounded-lg text-xs font-mono text-[#94a3b8] transition-colors"
               title="Click to copy contract address"
             >
               <Cpu className="w-3.5 h-3.5 text-[#38bdf8]" />
-              <span>{contractAddress.slice(0, 8)}...{contractAddress.slice(-6)}</span>
+              <span>{contractAddress ? `${contractAddress.slice(0, 8)}...${contractAddress.slice(-6)}` : 'Contract not configured'}</span>
               {copied ? <Check className="w-3.5 h-3.5 text-[#10b981]" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
           </div>
+          <div className="hidden md:flex items-center gap-2">
+            {connectedWallet ? (
+              <>
+                <span className="max-w-36 truncate text-xs font-mono text-[#94a3b8]" title={connectedWallet.address}>{connectedWallet.address}</span>
+                <button onClick={disconnectWallet} className="px-3 py-2 text-xs rounded-lg border border-[#334155] text-white">Disconnect</button>
+              </>
+            ) : (
+              <button onClick={discoverWallets} className="px-3 py-2 text-xs rounded-lg bg-[#10b981] text-[#07110e] font-semibold">Connect Lace</button>
+            )}
+            {walletChoices.map(({ id, api }) => (
+              <button key={id} onClick={() => connectWallet(api)} className="px-2 py-1 text-xs rounded border border-[#334155] text-white">{api.name}</button>
+            ))}
+          </div>
         </div>
+        {walletError && <p role="alert" className="px-6 pb-2 text-xs text-rose-300">{walletError}</p>}
       </header>
 
       {/* Main Navigation Tabs */}
@@ -323,7 +312,7 @@ export function App() {
                       <div className="space-y-1 text-[#34d399] text-[11px]">
                         <div>✓ Verified Claim Target: "Technical Security & Systems Activities"</div>
                         <div>✓ Objective Rule: language == 'Java' && has_socket_networking == true</div>
-                        <div>✓ Normalized Count: <span className="font-bold text-white">{activityCountInput} verified activities</span></div>
+                        <div>Private evidence is not connected to a trusted source yet.</div>
                         <div className="text-[#94a3b8] text-[10px] mt-1 pt-1 border-t border-[#1a2337]">
                           * Personal emails, repository names, and identities are scrubbed before reaching the ZK circuit.
                         </div>
@@ -347,7 +336,7 @@ export function App() {
                   </div>
 
                   <div className="space-y-5">
-                    {/* Public Threshold Slider */}
+                    {/* Public Threshold */}
                     <div>
                       <div className="flex justify-between items-center mb-1.5">
                         <label className="text-xs font-semibold text-white flex items-center space-x-1.5">
@@ -355,20 +344,12 @@ export function App() {
                           <span>Required Threshold (Public Ledger State)</span>
                         </label>
                         <span className="font-mono text-sm font-bold text-[#38bdf8] bg-[#38bdf8]/10 px-2 py-0.5 rounded border border-[#38bdf8]/20">
-                          {thresholdInput} activities
+                          Configure contract threshold on-chain
                         </span>
                       </div>
                       <p className="text-xs text-[#94a3b8] mb-2">
                         Function: <code className="text-xs text-white">initialise_claim(required_count)</code>. Stored on-chain so verifiers know the required benchmark.
                       </p>
-                      <input
-                        type="range"
-                        min="1"
-                        max="30"
-                        value={thresholdInput}
-                        onChange={(e) => setThresholdInput(Number(e.target.value))}
-                        className="w-full accent-[#38bdf8] bg-[#1a2338] h-2 rounded-lg cursor-pointer"
-                      />
                     </div>
 
                     {/* Private Witness Slider */}
@@ -379,81 +360,18 @@ export function App() {
                           <span>Your Actual Count (Private Circuit Witness)</span>
                         </label>
                         <span className="font-mono text-sm font-bold text-[#f59e0b] bg-[#f59e0b]/10 px-2 py-0.5 rounded border border-[#f59e0b]/20">
-                          {activityCountInput} activities
+                          Private until a real proof is submitted
                         </span>
                       </div>
                       <p className="text-xs text-[#94a3b8] mb-2">
                         Function: <code className="text-xs text-white">submit_proof(activity_count)</code>. Evaluated in zero-knowledge. <strong>Never stored on the ledger.</strong>
                       </p>
-                      <input
-                        type="range"
-                        min="1"
-                        max="30"
-                        value={activityCountInput}
-                        onChange={(e) => setActivityCountInput(Number(e.target.value))}
-                        className="w-full accent-[#f59e0b] bg-[#1a2338] h-2 rounded-lg cursor-pointer"
-                      />
                     </div>
 
                     {/* Expected Outcome Indicator */}
-                    <div className={`p-3 rounded-xl border flex items-center space-x-3 text-xs ${
-                      activityCountInput >= thresholdInput
-                        ? 'bg-[#10b981]/10 border-[#10b981]/30 text-[#34d399]'
-                        : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
-                    }`}>
-                      {activityCountInput >= thresholdInput ? (
-                        <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-[#10b981]" />
-                      ) : (
-                        <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400" />
-                      )}
-                      <div>
-                        <strong>Mathematical Outcome:</strong> {activityCountInput} ≥ {thresholdInput} is{' '}
-                        <span className="font-mono font-bold">
-                          {activityCountInput >= thresholdInput ? 'TRUE (Verified)' : 'FALSE (Insufficient)'}
-                        </span>.
-                        {activityCountInput >= thresholdInput
-                          ? ' The circuit will prove your qualification without revealing you have exactly ' + activityCountInput + ' items.'
-                          : ' The circuit will fail to prove the threshold.'}
-                      </div>
+                    <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs text-amber-200">
+                      A connected wallet is ready, but circuit submission is unavailable until the contract and Midnight.js wallet provider are configured. No proof or transaction is simulated.
                     </div>
-
-                    {/* Generate Proof Trigger Button */}
-                    <button
-                      onClick={handleGenerateProof}
-                      disabled={isProving}
-                      className="w-full py-3.5 px-4 bg-gradient-to-r from-[#10b981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold rounded-xl shadow-lg shadow-[#10b981]/25 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      {isProving ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                          <span>Generating ZK Proof on Midnight Proof Server...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4" />
-                          <span>Generate ZK Proof & Commit to Ledger</span>
-                        </>
-                      )}
-                    </button>
-
-                    {/* Proving Execution Terminal Output */}
-                    {isProving && (
-                      <div className="bg-[#090d16] border border-[#1a2337] rounded-xl p-4 font-mono text-xs text-[#94a3b8] space-y-2">
-                        <div className="flex justify-between items-center text-[11px] text-[#38bdf8]">
-                          <span>ZK Proving Pipeline in Progress</span>
-                          <span>{provingProgress}%</span>
-                        </div>
-                        <div className="w-full bg-[#1e293b] h-1.5 rounded-full overflow-hidden">
-                          <div
-                            className="bg-[#10b981] h-full transition-all duration-300"
-                            style={{ width: `${provingProgress}%` }}
-                          />
-                        </div>
-                        <p className="text-[11px] text-[#f8fafc] animate-pulse">
-                          {provingStep}
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -471,7 +389,7 @@ export function App() {
                     </div>
                     <span className="flex items-center space-x-1.5 text-xs font-mono text-[#10b981] bg-[#10b981]/10 px-2.5 py-1 rounded border border-[#10b981]/25">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-ping"></span>
-                      <span>Synced</span>
+                      <span>Not connected</span>
                     </span>
                   </div>
 
@@ -487,13 +405,13 @@ export function App() {
                           ? 'bg-[#10b981]/15 text-[#34d399] border border-[#10b981]/30'
                           : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
                       }`}>
-                        {contractState.isVerified ? 'TRUE (Verified)' : 'FALSE'}
+                        {contractState.isVerified === null ? 'No chain result loaded' : contractState.isVerified ? 'TRUE (Verified)' : 'FALSE'}
                       </span>
                     </div>
 
                     <div className="bg-[#090d16] border border-[#1e283d] p-3.5 rounded-xl flex justify-between items-center">
                       <span className="text-[#94a3b8]">export ledger threshold:</span>
-                      <span className="text-white font-bold">{contractState.threshold} activities</span>
+                      <span className="text-white font-bold">{contractState.hasInitialised ? `${contractState.threshold} activities` : 'Not loaded'}</span>
                     </div>
 
                     <div className="bg-[#090d16] border border-[#1e283d] p-3.5 rounded-xl flex justify-between items-center">
@@ -506,8 +424,8 @@ export function App() {
 
                     <div className="bg-[#090d16] border border-[#1e283d] p-3.5 rounded-xl space-y-1 text-[11px]">
                       <div className="text-[#94a3b8]">Latest Proving Transaction:</div>
-                      <div className="text-[#38bdf8] truncate">{contractState.txHash}</div>
-                      <div className="text-[#64748b] text-[10px]">Settled: {contractState.timestamp}</div>
+                      <div className="text-[#38bdf8] truncate">{contractState.txHash ?? 'No transaction yet'}</div>
+                      <div className="text-[#64748b] text-[10px]">{contractState.timestamp ? `Settled: ${contractState.timestamp}` : 'Awaiting a real contract call'}</div>
                     </div>
                   </div>
                 </div>
@@ -524,7 +442,7 @@ export function App() {
                       </span>
                     </div>
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#38bdf8]/10 text-[#38bdf8] border border-[#38bdf8]/20">
-                      ID: #PS-8841
+                      Claim ID: unavailable
                     </span>
                   </div>
 
@@ -543,7 +461,7 @@ export function App() {
                         <span className="text-[#f8fafc]">Technical Security Activities</span>
                         <span className="text-[#10b981] font-bold flex items-center space-x-1 font-mono">
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>≥ {contractState.threshold} Verified</span>
+                          <span>{contractState.isVerified === null ? 'No verified claim loaded' : `≥ ${contractState.threshold} Verified`}</span>
                         </span>
                       </div>
 
@@ -622,14 +540,14 @@ export function App() {
                   <div className="text-xs font-mono text-[#38bdf8] uppercase tracking-wider mb-1">
                     Verification Audit Report
                   </div>
-                  <h3 className="text-xl font-bold text-white">Candidate #PS-8841</h3>
+                  <h3 className="text-xl font-bold text-white">No candidate claim loaded</h3>
                   <p className="text-xs text-[#94a3b8] mt-1 font-mono">
-                    Contract on Midnight: {contractAddress.slice(0, 16)}...
+                    Contract on Midnight: {contractAddress ? `${contractAddress.slice(0, 16)}...` : 'Not configured'}
                   </p>
                 </div>
                 <div className="flex items-center space-x-2 bg-[#10b981]/15 text-[#34d399] border border-[#10b981]/30 px-3.5 py-1.5 rounded-xl font-mono text-xs font-bold">
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>CRYPTOGRAPHICALLY VALID</span>
+                  <span>Awaiting on-chain result</span>
                 </div>
               </div>
 
@@ -649,7 +567,7 @@ export function App() {
                     <span className="text-white font-medium">Security Activity Benchmark</span>
                     <span className="text-[#10b981] font-mono font-semibold flex items-center space-x-1.5">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>≥ 10 Activities Passed</span>
+                      <span>No claim loaded</span>
                     </span>
                     <span className="text-[#f59e0b] font-mono flex items-center space-x-1">
                       <Lock className="w-3 h-3" />
@@ -661,7 +579,7 @@ export function App() {
                     <span className="text-white font-medium">Networking & Distributed Systems</span>
                     <span className="text-[#10b981] font-mono font-semibold flex items-center space-x-1.5">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Java Socket Verified</span>
+                      <span>No evidence adapter configured</span>
                     </span>
                     <span className="text-[#f59e0b] font-mono flex items-center space-x-1">
                       <Lock className="w-3 h-3" />
@@ -800,7 +718,7 @@ export function App() {
                   </p>
                 </div>
                 <span className="px-3 py-1 rounded-full bg-[#10b981]/15 text-[#34d399] border border-[#10b981]/30 text-xs font-mono font-bold">
-                  8 / 8 Checkpoint Deliverables Complete
+                  Foundation status: deployment and proof flow pending
                 </span>
               </div>
             </div>
@@ -808,14 +726,12 @@ export function App() {
             {/* Checklist Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
-                { title: 'Compact Project Initialized', desc: 'macOS M1 Apple Silicon toolchain with Compact CLI 0.5.2 & compiler 0.31.1' },
-                { title: 'ProofShield Smart Contract Created', desc: 'contracts/proofshield.compact with initialise_claim and submit_proof circuits' },
-                { title: 'Contract Successfully Compiled', desc: 'compact compile generated ZK keys for k=7 and k=9 circuits' },
-                { title: 'Managed Directory Generated', desc: 'contracts/managed/proofshield with keys, compiler info, and zkir' },
-                { title: '100% Automated Tests Passing', desc: 'Vitest test suite: deploy, initialise, passing claim, and failing claim all verified' },
-                { title: 'Docker Proof Server Active', desc: 'midnightntwrk/proof-server:8.1.0 running on localhost:6300' },
-                { title: 'Comprehensive README.md', desc: 'Privacy model, public ledger vs private witness, and setup instructions documented' },
-                { title: 'Clean Git History (7+ Commits)', desc: 'Proper development progression with zero secrets or private keys committed' },
+                { title: 'Compact contract', desc: 'Two circuits in contract/proofshield.compact.' },
+                { title: 'Generated artifacts', desc: 'Managed contract bindings, keys, and circuit data are committed.' },
+                { title: 'Local integration tests', desc: 'Four deployment and circuit integration tests are defined; run them with Docker services available.' },
+                { title: 'Lace connection', desc: 'Studio connects to an injected Midnight wallet on Preprod.' },
+                { title: 'Deployment helper', desc: 'yarn deploy writes the returned address to ignored deployment.json.' },
+                { title: 'Circuit submission', desc: 'Browser transaction adapter is still required.' },
               ].map((item, i) => (
                 <div key={i} className="bg-[#0f1523] border border-[#1e283d] p-4 rounded-xl flex items-start space-x-3">
                   <CheckCircle2 className="w-5 h-5 text-[#10b981] flex-shrink-0 mt-0.5" />
@@ -827,28 +743,21 @@ export function App() {
               ))}
             </div>
 
-            {/* Verified Test Suite Output Display */}
+            {/* Test execution instructions */}
             <div className="bg-[#090d16] border border-[#1e283d] rounded-2xl p-6 font-mono text-xs">
               <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#1e283d]">
                 <span className="text-xs text-white font-semibold flex items-center space-x-2">
                   <Terminal className="w-4 h-4 text-[#10b981]" />
-                  <span>Terminal: yarn test:local (Vitest Output)</span>
+                  <span>Run local contract integration tests</span>
                 </span>
                 <span className="text-[11px] text-[#10b981] bg-[#10b981]/15 px-2 py-0.5 rounded border border-[#10b981]/30">
-                  4 passed (4) — 76.42s
+                  Requires the local node, indexer, and proof server
                 </span>
               </div>
 
               <div className="space-y-1.5 text-[11px] text-[#cbd5e1]">
-                <div className="text-[#38bdf8] font-bold">RUN  v4.1.11 /Users/someone/risin/midnight-risin</div>
-                <div className="text-[#94a3b8] mt-2">✓ src/test/proofshield.test.ts (4 tests) 76419ms</div>
-                <div className="text-[#34d399] pl-4">✓ ProofShield Contract (local) &gt; Deploys the ProofShield contract with no claim verified (22059ms)</div>
-                <div className="text-[#34d399] pl-4">✓ ProofShield Contract (local) &gt; Initialises a claim threshold of 10 activities (17364ms)</div>
-                <div className="text-[#34d399] pl-4">✓ ProofShield Contract (local) &gt; Proves the claim passes when activity_count &gt;= threshold (18802ms)</div>
-                <div className="text-[#34d399] pl-4">✓ ProofShield Contract (local) &gt; Proves the claim fails when activity_count &lt; threshold (17447ms)</div>
-                <div className="text-[#10b981] font-bold pt-3 border-t border-[#1e283d] mt-3">
-                  Test Files: 1 passed (1) | Tests: 4 passed (4) | Duration: 78.49s
-                </div>
+                <div>docker compose up -d --wait node indexer proof-server</div>
+                <div>yarn test:local</div>
               </div>
             </div>
           </div>

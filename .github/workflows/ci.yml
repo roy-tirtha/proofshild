@@ -1,0 +1,26 @@
+name: Midnight CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  contract-and-frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+      - uses: midnightntwrk/setup-compact-action@v1
+        with:
+          compact-version: '0.5.2'
+      - run: yarn install --frozen-lockfile
+      - run: yarn compile
+      - run: yarn build
+      - run: docker compose up -d --wait node indexer proof-server
+      - run: yarn test:local
+      - if: always()
+        run: docker compose down -v

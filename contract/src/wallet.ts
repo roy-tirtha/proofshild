@@ -107,9 +107,7 @@ export class MidnightWalletProvider implements MidnightProvider, WalletProvider 
       keystore: UnshieldedKeystore;
     };
 
-    logger.info(
-      `Wallet built from ${secret.kind}; master seed: ${seeds.masterSeed.slice(0, 8)}...`,
-    );
+    logger.info(`Wallet built from ${secret.kind}.`);
 
     return new MidnightWalletProvider(
       logger,

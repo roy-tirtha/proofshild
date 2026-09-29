@@ -1,5 +1,7 @@
 # ProofShield
 
+![Midnight CI](https://github.com/roy-tirtha/proofshild/actions/workflows/ci.yml/badge.svg)
+
 > **Privacy-first technical achievement verification on the Midnight network.**
 
 ProofShield is a Level 1 prototype of a privacy-preserving system that allows
@@ -10,40 +12,23 @@ personal history, raw credentials, or complete activity records.
 
 ## Initial Product Idea
 
-ProofShield is designed to solve a real problem: today, proving a technical
-qualification requires exposing far more personal information than is actually
-necessary. A recruiter asking "does this person have networking experience and
-10+ verified security activities?" currently receives an entire GitHub profile,
-resume, or portfolio — information they did not need and the candidate may not
-want to share.
-
-ProofShield's goal is to change this with the following model:
-
-> **Evidence → Verification → Privacy-preserving Proof**
-
-A user gathers evidence from trusted sources (GitHub, CTF platforms,
-certifications). ProofShield verifies that evidence against objective rules.
-Then, using Midnight's zero-knowledge proof system, it produces a claim that a
-verifier can check — seeing only the specific answer to their specific question,
-nothing more.
-
-This is not a certificate wallet. It is a selective-disclosure proof system for
-technical achievements.
+ProofShield lets technical candidates prove a narrow qualification, such as meeting a security activity threshold, without sharing their raw activity count, repository history, or identity details. Trusted evidence adapters can validate source data off-chain, while a Midnight Compact circuit proves the qualification and reveals only the public threshold and pass/fail result.
 
 ---
 
 ## Level 1 — New Moon (Current Scope)
 
-This repository contains the **Level 1** prototype: the foundational Compact
-smart contract for ProofShield, deployed to the Midnight Preprod/Preview network.
+This repository contains the ProofShield Compact contract, generated artifacts,
+local integration tests, a deployment helper, and a Lace wallet connection flow.
+It does not yet include a browser transaction adapter or a published Preprod
+deployment.
 
 **What Level 1 includes:**
-- A working Compact smart contract with two privacy circuits
-- ZK proof generation for a technical achievement claim
-- Contract compiled with `compact compile` (proof keys generated)
-- Test suite verifying the core privacy model
-- Deployment to Midnight Preprod or Preview network
-- **Interactive React UI (`ui/`)**: A complete studio connecting the platform adapters, Compact ZK circuits, live proof server simulation, on-chain ledger state, and verifier portal.
+- Compact source with two circuits and generated proving/verifying artifacts
+- Local Midnight integration tests for deploy, threshold initialization, and passing/failing proofs
+- A helper to deploy to Preview or Preprod and save the returned address
+- Lace DApp Connector wallet connect/disconnect in the Studio
+- GitHub Actions workflow for compilation, frontend build, and local contract tests
 
 ---
 
@@ -115,21 +100,18 @@ yarn install
 The Proof Server must be running before you run local tests. It is the service
 that generates ZK proofs for your circuits.
 
-If you already have it running via Docker:
+Start the local node, indexer, and proof server together:
 ```bash
-docker ps  # Confirm proof server is running on port 6300
-```
-
-Or start it via Docker directly:
-```bash
-docker run -d -p 6300:6300 midnightntwrk/proof-server:8.1.0
+docker compose up -d --wait node indexer proof-server
 ```
 
 ---
 
 ## Launch Interactive Web UI
 
-ProofShield includes a React web application with a ZK Proof Studio and Verifier Portal running directly from the project root.
+Run Vite and open `/studio.html` to use the Lace connection panel. Proof
+submission and on-chain verification remain disabled until the browser
+Midnight.js transaction adapter is implemented and a contract is deployed.
 
 ```bash
 # Launch development server:
@@ -138,11 +120,9 @@ yarn dev
 npm run dev
 ```
 
-Open **`http://localhost:5173`** in your browser to interact with:
-- **ZK Proof Studio**: Adjust thresholds, simulate platform adapters (GitHub, Hack The Box, TryHackMe), and trigger cryptographic ZK proof generation.
-- **Verifier Portal**: Query public on-chain claims without leaking candidate identity or repository history.
-- **Circuit & Privacy Inspector**: Live breakdown of `proofshield.compact` public state vs private witnesses.
-- **Level 1 Deliverables**: Live test suite status and submission checklist.
+Open **`http://localhost:5173/studio.html`** in a browser with Lace installed.
+Choose Preprod when the wallet prompts for a network and approve the connection.
+Never enter a wallet seed or mnemonic into the web app.
 
 ---
 
@@ -156,16 +136,13 @@ yarn compile
 # equivalent: compact compile contract/proofshield.compact contract/managed/proofshield
 ```
 
-**Expected output:**
+The compiler reports the circuit count and generates their keys and bindings.
+Progress detail varies by compiler build.
 ```
 Compiling 2 circuits:
-  circuit "initialise_claim" (k=7, rows=90)
-  circuit "submit_proof" (k=9, rows=123)
-Overall progress [====================] 2/2
 ```
 
-> 📸 **Screenshot 1 (for Rise In submission):** Capture this terminal output
-> showing both circuits compiled successfully.
+> 📸 **Screenshot 1:** Capture the successful compiler output for submission.
 
 The `contract/managed/proofshield/` directory contains:
 ```
@@ -180,9 +157,10 @@ contract/managed/proofshield/
 
 ## Testing
 
-### Local test (proof server must be running on port 6300)
+### Local integration tests (Docker services must be running)
 
 ```bash
+docker compose up -d --wait node indexer proof-server
 MIDNIGHT_NETWORK=local yarn test
 ```
 
@@ -210,15 +188,19 @@ The test suite runs 4 tests that verify the core privacy model:
 
 ## Deployment
 
-After running `yarn test:preprod` (or `yarn test:preview`), the test suite
-deploys the contract and logs the contract address:
+Set up `.env.preprod` or `.env.preview` from its example with exactly one wallet
+mnemonic or seed, fund the wallet, compile, then deploy:
 
 ```
-INFO: Contract deployed at: <contract-address>
+MIDNIGHT_NETWORK=preprod yarn deploy
 ```
 
 > 📸 **Screenshot 2 (for Rise In submission):** Capture the terminal output
 > showing the contract address after successful deployment.
+
+The helper prints the address returned by `deployContract` and saves it in the
+ignored `deployment.json`. Set `VITE_CONTRACT_ADDRESS` to that value before
+building the frontend to display it. Never commit wallet secrets.
 
 ### Deployed contract address
 
@@ -270,8 +252,9 @@ midnight-risin/
 Moonshots on Midnight" program.
 
 - ✅ Level 1: Contract foundation (this repository)
-- ⬜ Level 2: Frontend + Lace wallet integration
-- ⬜ Level 3: Tests, CI/CD, production-grade contract
+- ✅ Level 2 foundation: Lace wallet connection and disconnect
+- ✅ CI: Compile, build, and local contract integration workflow
+- ⬜ Browser circuit submission and live verifier queries
 - ⬜ Level 4: MVP on Preprod with real platform adapters
 - ⬜ Level 5: User onboarding (50 Preprod users)
 - ⬜ Level 6: Mainnet launch

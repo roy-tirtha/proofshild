@@ -419,28 +419,28 @@
     <!-- Main Content -->
     <main>
       <h1 class="page-title">ProofStudio & Verifier Portal</h1>
-      <p class="page-lead">
-        Interactive zero-knowledge circuit executor and verification suite powered by Midnight Compact 0.23 and local proof server. Test private witness evaluation and public on-chain verification in real time.
-      </p>
+      <p class="page-lead">Compact contract and wallet workspace. Proof generation requires a deployed contract and Midnight.js wallet transaction provider.</p>
 
       <!-- Status Bar -->
       <div class="status-bar">
         <div class="status-group">
           <div class="status-pill">
-            <span class="status-dot-green"></span>
-            <span>Midnight Node: localhost:9944</span>
+            <span class="status-dot-green" style="background:#f59e0b"></span>
+            <span>Network: wallet connection required</span>
           </div>
           <div class="status-pill">
-            <span class="status-dot-green"></span>
-            <span>Proof Server: localhost:6300</span>
+            <span class="status-dot-green" style="background:#f59e0b"></span>
+            <span>Proof service: not checked</span>
           </div>
           <div class="status-pill">
             <span class="status-dot-green"></span>
             <span>Circuit: proofshield.compact</span>
           </div>
         </div>
-        <div class="status-pill" style="color: #94a3b8;">
-          Session: <span style="color: #ffffff; font-weight: 600;">0x7a31...489c</span>
+        <div class="status-pill" style="color: #94a3b8; display:flex; gap:8px; align-items:center">
+          <span id="lace-status">Wallet disconnected</span>
+          <button id="lace-connect" type="button">Connect Lace</button>
+          <button id="lace-disconnect" type="button" hidden>Disconnect</button>
         </div>
       </div>
 
@@ -463,9 +463,9 @@
                 <i class="fa-solid fa-lock" style="font-size: 11px; color: #c084fc;"></i>
                 Private Candidate Merit Score
               </span>
-              <span class="control-val" id="score-val">88 / 100</span>
+              <span class="control-val" id="score-val">Not connected to evidence source</span>
             </div>
-            <input type="range" class="slider-input" id="score-slider" min="0" max="100" value="88" />
+            <input type="range" class="slider-input" id="score-slider" min="0" max="100" value="88" disabled />
             <div style="font-size: 11.5px; color: #71717a; margin-top: 6px;">
               Only evaluated inside your local browser memory buffer. Never sent to network.
             </div>
@@ -478,9 +478,9 @@
                 <i class="fa-solid fa-globe" style="font-size: 11px; color: #60a5fa;"></i>
                 Public Requirement Threshold
               </span>
-              <span class="control-val" id="thresh-val">75 / 100</span>
+              <span class="control-val" id="thresh-val">Not loaded from chain</span>
             </div>
-            <input type="range" class="slider-input" id="thresh-slider" min="0" max="100" value="75" />
+            <input type="range" class="slider-input" id="thresh-slider" min="0" max="100" value="75" disabled />
             <div style="font-size: 11.5px; color: #71717a; margin-top: 6px;">
               Target requirement defined on the Midnight smart contract ledger.
             </div>
@@ -495,23 +495,23 @@
               </span>
             </div>
             <div class="salt-box">
-              <input type="text" class="salt-input" id="salt-input" value="0x7f4e91a2bc0839de81745fa10948b2ce" readonly />
-              <button class="salt-btn" id="regen-salt-btn" title="Generate New Entropy">
+              <input type="text" class="salt-input" id="salt-input" value="Generated when a circuit call is configured" readonly />
+              <button class="salt-btn" id="regen-salt-btn" title="Circuit call is not configured" disabled>
                 <i class="fa-solid fa-rotate"></i>
               </button>
             </div>
           </div>
 
           <!-- Constraint Status Pill -->
-          <div class="constraint-pill constraint-satisfied" id="constraint-pill">
-            <span id="constraint-text">Constraint: 88 >= 75 (Satisfied)</span>
+          <div class="constraint-pill" id="constraint-pill">
+            <span id="constraint-text">No claim result loaded</span>
             <i class="fa-solid fa-circle-check" id="constraint-icon"></i>
           </div>
 
           <!-- Prover Action Button -->
-          <button class="action-btn" id="generate-proof-btn">
+          <button class="action-btn" id="generate-proof-btn" disabled>
             <i class="fa-solid fa-wand-magic-sparkles"></i>
-            <span>Generate Zero-Knowledge Proof</span>
+            <span>Proof submission not configured</span>
           </button>
 
           <!-- Execution Terminal -->
@@ -526,13 +526,12 @@
               <span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: #4ade80;">VALID</span>
             </div>
             <div class="proof-hash" id="proof-hex-val">
-              0x02fa89b14c33e89a01f7c... [3,420 gate R1CS proof payload]
             </div>
             <div class="proof-meta">
-              <div class="proof-meta-item">Public Input (Threshold): <span class="proof-meta-val" id="meta-thresh">75</span></div>
+              <div class="proof-meta-item">Public Input (Threshold): <span class="proof-meta-val" id="meta-thresh">Not available</span></div>
               <div class="proof-meta-item">Private Witness: <span class="proof-meta-val" style="color: #c084fc;">REDACTED</span></div>
-              <div class="proof-meta-item">Commitment Nullifier: <span class="proof-meta-val" id="meta-null">0x81b...</span></div>
-              <div class="proof-meta-item">Prover Latency: <span class="proof-meta-val" style="color: #4ade80;">118 ms</span></div>
+              <div class="proof-meta-item">Commitment Nullifier: <span class="proof-meta-val" id="meta-null">Not generated</span></div>
+              <div class="proof-meta-item">Prover Latency: <span class="proof-meta-val">Not measured</span></div>
             </div>
             <button class="action-btn" id="transfer-to-verifier-btn" style="margin-top: 16px; background: rgba(255, 255, 255, 0.1); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: none;">
               <i class="fa-solid fa-arrow-right-arrow-left"></i>
@@ -560,7 +559,7 @@
               <i class="fa-solid fa-file-code" style="font-size: 11px; color: #60a5fa;"></i>
               zk-SNARK Proof Payload
             </label>
-            <textarea class="salt-input" id="verifier-proof-input" style="width: 100%; height: 100px; resize: none;" placeholder="Generate a proof or paste a zk-SNARK payload here...">0x02fa89b14c33e89a01f7ca48102bd98a729e928c0b53c6109e20a01948ba201e74</textarea>
+            <textarea class="salt-input" id="verifier-proof-input" style="width: 100%; height: 100px; resize: none;" placeholder="No proof payload available"></textarea>
           </div>
 
           <div class="control-row">
@@ -569,11 +568,11 @@
                 <i class="fa-solid fa-bullseye" style="font-size: 11px; color: #60a5fa;"></i>
                 Contract Requirement Threshold
               </span>
-              <span class="control-val" id="verifier-thresh-val">75</span>
+              <span class="control-val" id="verifier-thresh-val">Not loaded</span>
             </div>
           </div>
 
-          <button class="action-btn" id="verify-on-chain-btn">
+          <button class="action-btn" id="verify-on-chain-btn" disabled>
             <i class="fa-solid fa-check-double"></i>
             <span>Verify Proof On-Chain (Midnight Node)</span>
           </button>
@@ -583,22 +582,22 @@
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
               <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; color: #4ade80;">
                 <i class="fa-solid fa-circle-check"></i>
-                <span>VERIFICATION SUCCESSFUL</span>
+                <span>No verification result</span>
               </div>
               <span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: #86efac; background: rgba(34, 197, 94, 0.15); padding: 4px 8px; border-radius: 6px;">
-                BLOCK #184
+                No block
               </span>
             </div>
 
             <p style="font-size: 13.5px; color: #dcfce7; line-height: 1.5; margin-bottom: 16px;">
-              The zero-knowledge proof is cryptographically sound. The candidate meets or exceeds the required threshold (<strong>&ge; <span id="v-result-thresh">75</span></strong>). Zero confidential metrics were disclosed to the verifier.
+              An on-chain verification has not been submitted.
             </p>
 
             <div style="border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 14px; font-size: 12px; color: #94a3b8; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">
-              <div>Contract: <span style="color: #ffffff;">0x3c99...e281</span></div>
-              <div>Nullifier: <span style="color: #4ade80;">Stored (No Replay)</span></div>
-              <div>Gas Fee: <span style="color: #ffffff;">0.00041 DUST</span></div>
-              <div>Audit Status: <span style="color: #4ade80;">Passed</span></div>
+              <div>Contract: <span style="color: #ffffff;">Not configured</span></div>
+              <div>Nullifier: <span style="color: #4ade80;">Not generated</span></div>
+              <div>Gas Fee: <span style="color: #ffffff;">Not measured</span></div>
+              <div>Audit Status: <span style="color: #4ade80;">Not run</span></div>
             </div>
           </div>
         </div>
@@ -612,7 +611,7 @@
             <span>Active Contract: contract/proofshield.compact</span>
           </h3>
           <span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: #4ade80;">
-            Compact Compiler v0.31.1
+            Compact version 0.23 (contract pragma)
           </span>
         </div>
 
@@ -644,137 +643,43 @@
     </main>
   </div>
 
-  <script src="main.js"></script>
-  <script>
-    // Prover and Verifier Interactive Logic
-    const scoreSlider = document.getElementById('score-slider');
-    const threshSlider = document.getElementById('thresh-slider');
-    const scoreVal = document.getElementById('score-val');
-    const threshVal = document.getElementById('thresh-val');
-    const constraintPill = document.getElementById('constraint-pill');
-    const constraintText = document.getElementById('constraint-text');
-    const constraintIcon = document.getElementById('constraint-icon');
-    const generateBtn = document.getElementById('generate-proof-btn');
-    const saltInput = document.getElementById('salt-input');
-    const regenSaltBtn = document.getElementById('regen-salt-btn');
-    const terminalBox = document.getElementById('terminal-box');
-    const proofCard = document.getElementById('proof-card');
-    const proofHexVal = document.getElementById('proof-hex-val');
-    const metaThresh = document.getElementById('meta-thresh');
-    const metaNull = document.getElementById('meta-null');
-    const transferBtn = document.getElementById('transfer-to-verifier-btn');
-    const verifierProofInput = document.getElementById('verifier-proof-input');
-    const verifierThreshVal = document.getElementById('verifier-thresh-val');
-    const verifyOnChainBtn = document.getElementById('verify-on-chain-btn');
-    const verifierResult = document.getElementById('verifier-result');
-    const vResultThresh = document.getElementById('v-result-thresh');
+  <script type="module" src="main.js"></script>
+  <script type="module">
+    import '@midnight-ntwrk/dapp-connector-api';
 
-    function updateConstraints() {
-      const score = parseInt(scoreSlider.value, 10);
-      const thresh = parseInt(threshSlider.value, 10);
+    const connectButton = document.getElementById('lace-connect');
+    const disconnectButton = document.getElementById('lace-disconnect');
+    const status = document.getElementById('lace-status');
+    const terminal = document.getElementById('terminal-box');
+    let connectedApi;
 
-      scoreVal.textContent = `${score} / 100`;
-      threshVal.textContent = `${thresh} / 100`;
-      verifierThreshVal.textContent = thresh;
-      metaThresh.textContent = thresh;
-      vResultThresh.textContent = thresh;
-
-      if (score >= thresh) {
-        constraintPill.className = 'constraint-pill constraint-satisfied';
-        constraintText.textContent = `Constraint: ${score} >= ${thresh} (Satisfied)`;
-        constraintIcon.className = 'fa-solid fa-circle-check';
-        generateBtn.disabled = false;
-      } else {
-        constraintPill.className = 'constraint-pill constraint-violated';
-        constraintText.textContent = `Constraint: ${score} < ${thresh} (Violated: Score below threshold)`;
-        constraintIcon.className = 'fa-solid fa-circle-xmark';
-        generateBtn.disabled = true;
+    connectButton.addEventListener('click', async () => {
+      try {
+        const wallets = Object.values(window.midnight ?? {});
+        if (!wallets.length) throw new Error('No Midnight wallet detected. Install Lace and refresh this page.');
+        const wallet = wallets.find(({ rdns }) => rdns.toLowerCase().includes('lace')) ?? wallets[0];
+        const api = await wallet.connect('preprod');
+        const [{ unshieldedAddress }, connection] = await Promise.all([
+          api.getUnshieldedAddress(), api.getConnectionStatus()
+        ]);
+        if (connection.status !== 'connected') throw new Error('Wallet connection was not established.');
+        connectedApi = api;
+        status.textContent = `${wallet.name}: ${unshieldedAddress}`;
+        connectButton.hidden = true;
+        disconnectButton.hidden = false;
+      } catch (error) {
+        status.textContent = error instanceof Error ? error.message : 'Wallet connection failed.';
       }
-    }
-
-    scoreSlider.addEventListener('input', updateConstraints);
-    threshSlider.addEventListener('input', updateConstraints);
-
-    function genSalt() {
-      const hex = '0x' + Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-      saltInput.value = hex;
-    }
-
-    regenSaltBtn.addEventListener('click', genSalt);
-
-    function appendTerm(tag, text, type = 'normal') {
-      const line = document.createElement('div');
-      line.className = 'terminal-line';
-      const tagSpan = document.createElement('span');
-      tagSpan.className = `terminal-tag ${type}`;
-      tagSpan.textContent = `[${tag}]`;
-      const textSpan = document.createElement('span');
-      textSpan.textContent = text;
-      line.appendChild(tagSpan);
-      line.appendChild(textSpan);
-      terminalBox.appendChild(line);
-      terminalBox.scrollTop = terminalBox.scrollHeight;
-    }
-
-    generateBtn.addEventListener('click', () => {
-      const score = parseInt(scoreSlider.value, 10);
-      const thresh = parseInt(threshSlider.value, 10);
-      const salt = saltInput.value;
-
-      generateBtn.disabled = true;
-      generateBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Synthesizing zk-SNARK...</span>';
-
-      terminalBox.innerHTML = '';
-      appendTerm('COMPACT', 'Loading AST: contract/proofshield.compact');
-
-      setTimeout(() => {
-        appendTerm('WITNESS', `Private witness (${score}) bound into ephemeral prover memory`);
-      }, 200);
-
-      setTimeout(() => {
-        appendTerm('CIRCUIT', `Verifying constraint: witness (${score}) >= threshold (${thresh}) -> OK`, 'ok');
-      }, 400);
-
-      setTimeout(() => {
-        const nullHex = '0x' + Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join('') + '...';
-        metaNull.textContent = nullHex;
-        appendTerm('NULLIFIER', `Generating nullifier hash: poseidon_hash(witness, salt) -> ${nullHex}`);
-      }, 600);
-
-      setTimeout(() => {
-        appendTerm('PROOF-SERVER', 'Connecting to localhost:6300/prove (Midnight Proof Server)...');
-      }, 800);
-
-      setTimeout(() => {
-        appendTerm('PROOF-SERVER', 'R1CS synthesis complete: 3,420 gates satisfied in 118ms', 'ok');
-        const proofHex = '0x02fa' + Array.from({ length: 48 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-        proofHexVal.textContent = proofHex + '... [zk-SNARK Payload]';
-        proofCard.style.display = 'block';
-
-        generateBtn.disabled = false;
-        generateBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> <span>Generate Zero-Knowledge Proof</span>';
-      }, 1100);
     });
 
-    transferBtn.addEventListener('click', () => {
-      verifierProofInput.value = proofHexVal.textContent;
-      verifierResult.classList.remove('visible');
-      verifierProofInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    disconnectButton.addEventListener('click', () => {
+      connectedApi = undefined;
+      status.textContent = 'Wallet disconnected';
+      connectButton.hidden = false;
+      disconnectButton.hidden = true;
     });
 
-    verifyOnChainBtn.addEventListener('click', () => {
-      verifyOnChainBtn.disabled = true;
-      verifyOnChainBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Querying Midnight Node (9944)...</span>';
-
-      setTimeout(() => {
-        verifierResult.classList.add('visible');
-        verifyOnChainBtn.disabled = false;
-        verifyOnChainBtn.innerHTML = '<i class="fa-solid fa-check-double"></i> <span>Verify Proof On-Chain (Midnight Node)</span>';
-      }, 850);
-    });
-
-    // Initialize
-    updateConstraints();
+    terminal.textContent = 'No circuit call was made. Configure a deployed contract and Midnight.js transaction provider to enable proving.';
   </script>
 </body>
 </html>

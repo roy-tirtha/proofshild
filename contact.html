@@ -439,27 +439,16 @@
     </main>
   </div>
 
-  <script src="main.js"></script>
+  <script type="module" src="main.js"></script>
   <script>
-    // Form submission handler
     const form = document.getElementById('contact-form');
     const submitBtn = document.getElementById('submit-btn');
-    const successPanel = document.getElementById('success-panel');
-    const ticketHash = document.getElementById('ticket-hash');
 
     if (form) {
       form.addEventListener('submit', (e) => {
         e.preventDefault();
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Encrypting & Registering...</span>';
-
-        setTimeout(() => {
-          // Generate realistic cryptographic hash
-          const randHex = '0x' + Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-          ticketHash.textContent = randHex;
-          form.style.display = 'none';
-          successPanel.classList.add('visible');
-        }, 1100);
+        submitBtn.textContent = 'Contact submission is not configured';
       });
     }
   </script>
