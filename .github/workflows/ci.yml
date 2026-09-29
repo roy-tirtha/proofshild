@@ -15,8 +15,6 @@ jobs:
           node-version: 22
           cache: yarn
       - uses: midnightntwrk/setup-compact-action@v1
-        with:
-          compact-version: '0.5.2'
       - run: yarn install --frozen-lockfile
       - run: yarn compile
       - run: yarn build
