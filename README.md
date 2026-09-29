@@ -19,15 +19,17 @@ ProofShield lets technical candidates prove a narrow qualification, such as meet
 ## Level 1 — New Moon (Current Scope)
 
 This repository contains the ProofShield Compact contract, generated artifacts,
-local integration tests, a deployment helper, and a Lace wallet connection flow.
-It does not yet include a browser transaction adapter or a published Preprod
-deployment.
+local integration tests, a deployment helper, Lace/1AM wallet connection, and
+MongoDB-backed auth/profile APIs. Browser contract calls and a published
+Preprod deployment are not yet available.
 
 **What Level 1 includes:**
 - Compact source with two circuits and generated proving/verifying artifacts
 - Local Midnight integration tests for deploy, threshold initialization, and passing/failing proofs
 - A helper to deploy to Preview or Preprod and save the returned address
 - Lace and 1AM DApp Connector wallet connect/disconnect in the Studio
+- MongoDB Atlas persistence for email/Google accounts and linked wallet addresses
+- Authenticated, privacy-minimized proof transaction record API
 - GitHub Actions workflow for compilation, frontend build, and generated-circuit logic tests
 
 ---
@@ -74,6 +76,23 @@ from a trusted ProofShield Oracle. The Oracle verifies real GitHub data or CTF
 completions off-chain and signs the result. The user submits that signature as
 the private input. The Compact circuit verifies the signature without the
 verifier ever seeing the raw data.
+
+### MongoDB Records
+
+Better Auth stores email/password users, Google OAuth users/accounts, sessions,
+and verification records through the MongoDB adapter. The application also
+creates `wallet_links` and `proof_records`. Wallet links associate the
+connected public wallet address and network with the signed-in user. This is a
+client-reported association, not a server-verified cryptographic ownership
+signature. Proof
+records are restricted to transaction hash, circuit, contract, public
+threshold, and public pass/fail result. Raw activity counts, private witnesses,
+wallet secrets, and serialized proof payloads are not stored. The Studio does
+not yet submit circuits, so proof records will remain empty until real on-chain
+calls are implemented. Because wallet addresses and transaction hashes are
+linked to account IDs, the ProofShield backend/database operator can associate
+those public chain artifacts with the user's account. The Compact circuit does
+not hide that metadata linkage; disclose it to users.
 
 ---
 
@@ -124,16 +143,37 @@ Open **`http://localhost:5173/studio.html`** in a browser with Lace or 1AM
 installed. If both are available, choose one in the wallet selector. Select
 Preprod when prompted and approve the connection. Fund the wallet and ensure
 DUST is available before any future transaction flow. Never enter a wallet
-seed or mnemonic into the web app.
+seed or mnemonic into the web app. For authentication, run `yarn start` in a
+second terminal; Vite proxies `/api` to Express. Open the app at
+`http://localhost:5173/auth.html` (use `localhost`, not `127.0.0.1`, so OAuth
+cookies and redirect origins match).
 
-### Vercel static demo
+### Vercel demo and API
 
 Import this public GitHub repository into Vercel with the root directory set
-to `.`. `vercel.json` configures `yarn install --frozen-lockfile`, `yarn build`,
-and `dist`; no secrets or environment variables are required for the static
-demo. The UI's auth API and Midnight transaction submission are not hosted by
-this static deployment. Deploy `server/` separately if you need authentication.
-After deploying, test `/studio` and connect Lace or 1AM on Preprod.
+to `.`. `vercel.json` configures the Vite static output and `api/` contains
+Vercel Node functions for Better Auth and private user-record APIs; a separate
+Render backend is not required. Configure the server-only environment values
+`MONGODB_URI`, `MONGODB_DB_NAME`, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`,
+`GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET` in Vercel. Set
+`BETTER_AUTH_URL=https://proofshild.vercel.app`. Never add `MONGODB_URI`, the
+OAuth client secret, or auth secret to `VITE_*` variables. The same-origin
+serverless API handles `/api/auth`, `/api/wallets`, and `/api/proofs`.
+
+In Vercel Project → Settings → Environment Variables, add the six names above
+for Production (and Preview if desired). Generate `BETTER_AUTH_SECRET` with
+`openssl rand -base64 48`. Use the rotated Atlas database-user password in
+`MONGODB_URI` and set `MONGODB_DB_NAME=proofshield`.
+
+In Google Cloud Console, use the JavaScript origin
+`https://proofshild.vercel.app` and redirect URI
+`https://proofshild.vercel.app/api/auth/callback/google`. For local development
+also register origin `http://localhost:5173` and redirect URI
+`http://localhost:5173/api/auth/callback/google`. In Atlas, allow the Vercel
+function's network egress to reach the cluster; avoid a broad `0.0.0.0/0` rule
+unless you accept that exposure and have a restricted database user/password.
+Rotate any database password that has been exposed, then use the replacement
+in both local `.env` and Vercel's Production environment variables.
 
 ---
 

@@ -691,6 +691,29 @@
         if (connection.status !== 'connected') throw new Error('Wallet connection was not established.');
         connectedApi = api;
         status.textContent = `${wallet.name}: ${unshieldedAddress}`;
+        try {
+          const walletRecordResponse = await fetch('/api/wallets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              network: 'preprod',
+              walletAddress: unshieldedAddress,
+              walletName: wallet.name,
+              walletRdns: wallet.rdns ?? walletId,
+            }),
+          });
+          if (walletRecordResponse.status === 401) {
+            status.textContent += ' (sign in to save this wallet to your profile)';
+          } else if (!walletRecordResponse.ok) {
+            const result = await walletRecordResponse.json();
+            status.textContent += ` (not saved: ${result.error ?? 'server error'})`;
+          } else {
+            status.textContent += ' (saved to your profile)';
+          }
+        } catch {
+          status.textContent += ' (connected, but profile API is unavailable)';
+        }
         connectButton.hidden = true;
         disconnectButton.hidden = false;
       } catch (error) {

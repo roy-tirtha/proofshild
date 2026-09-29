@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { toNodeHandler } from 'better-auth/node';
 import { auth, getAuthConfig } from './auth.js';
+import { handleDeleteWallet, handleProofRecords, handleWalletRecords } from './records.js';
 
 dotenv.config();
 
@@ -32,6 +33,9 @@ app.all('/api/auth/*splat', toNodeHandler(auth));
 // Body parsers for custom API routes AFTER auth handler
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.all('/api/wallets', handleWalletRecords);
+app.all('/api/wallets/:id', handleDeleteWallet);
+app.all('/api/proofs', handleProofRecords);
 
 // System telemetry and auth status endpoint
 app.get('/api/system/status', (req, res) => {
