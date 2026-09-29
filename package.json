@@ -16,7 +16,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "compile": "compact compile contract/proofshield.compact contract/managed/proofshield",
-    "deploy": "tsx contract/deploy.ts",
+    "deploy": "yarn compile && tsx contract/deploy.ts",
     "test": "NODE_OPTIONS='--experimental-vm-modules' vitest run contract/src/test/proofshield-logic.test.ts",
     "test:integration": "NODE_OPTIONS='--experimental-vm-modules' vitest run contract/src/test/proofshield.test.ts",
     "test:local": "MIDNIGHT_NETWORK=local yarn test:integration",

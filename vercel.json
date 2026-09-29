@@ -5,6 +5,7 @@
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/profile", "destination": "/profile.html" },
-    { "source": "/auth", "destination": "/auth.html" }
+    { "source": "/auth", "destination": "/auth.html" },
+    { "source": "/proof", "destination": "/proof.html" }
   ]
 }

@@ -134,9 +134,9 @@ docker compose up -d --wait node indexer proof-server
 ## Launch Interactive Web UI
 
 Run the API server and Vite, then use the landing page, authentication page,
-and signed-in profile. The profile connects Lace or 1AM, displays linked wallet
-addresses and recent wallet transactions, reads Preprod contract state, sets a
-threshold once, and submits a private-count proof transaction.
+profile, and dedicated proof page. The profile shows account details, linked
+wallets, and histories. The proof page reads shared Preprod state and submits a
+private-count transaction using the configured shared contract.
 The current circuit proves the threshold comparison only; it does not attest
 that the user-reported count is true.
 
@@ -149,18 +149,17 @@ npm run dev
 
 Open **`http://localhost:5173/`**. Create an account or sign in at
 `http://localhost:5173/auth.html`. After signing in, open
-`http://localhost:5173/profile.html`. Install Lace or 1AM to connect a Preprod
-wallet from the navbar. Never enter a wallet seed or mnemonic into the web app.
+`http://localhost:5173/profile.html` or `http://localhost:5173/proof.html`.
+Install Lace or 1AM to connect a Preprod wallet from the navbar. Never enter a
+wallet seed or mnemonic into the web app.
 Vite proxies `/api` to the Express server.
 
-In the profile's **Generate a private proof** form, paste the deployed Preprod
-contract address, choose the public threshold, and enter a strong 16+ character
-password for encrypted browser storage. Click **Read on-chain state**, set the
-threshold once, then enter the private activity count and submit the proof.
-Lace/1AM will prompt for proving/transaction approval. The app never sends the
-private count to its API. To use a Vercel deployment, set `VITE_CONTRACT_ADDRESS`
-to the address returned by `yarn deploy` and redeploy; the address can also be
-pasted into the profile form.
+Open **Generate proof**, connect a Preprod wallet, enter the private activity
+count and a strong 16+ character browser-storage password, then approve the
+wallet prompt. The shared threshold is initialized to 10 by the deploy helper.
+The app never sends the private count to its API. Users do not deploy contracts
+or paste addresses; the project owner configures the single deployed address
+through `VITE_CONTRACT_ADDRESS` in Vercel.
 
 ### Vercel demo and API
 
@@ -265,17 +264,17 @@ MIDNIGHT_NETWORK=preprod yarn deploy
 > 📸 **Screenshot 2 (for Rise In submission):** Capture the terminal output
 > showing the contract address after successful deployment.
 
-The helper prints the address returned by `deployContract` and saves it in the
-ignored `deployment.json`. Set `VITE_CONTRACT_ADDRESS` to that value before
-building the frontend to display it. Never commit wallet secrets.
+The helper compiles, deploys the contract, initializes the shared threshold to
+10, and saves the resulting public address in ignored `deployment.json`. Never
+commit wallet secrets.
 
 To generate a Preprod contract address yourself:
 
 1. Install and verify the Compact CLI from the [Midnight downloads page](https://midnight.network/download); `compact --version` must match this project's compiler version (`0.23` language).
 2. Copy `.env.preprod.example` to `.env.preprod`; set exactly one of `MIDNIGHT_PREPROD_MNEMONIC` or `MIDNIGHT_PREPROD_SEED`. Keep this file private and never paste a wallet secret into the browser or GitHub.
 3. Fund that wallet for Preprod transactions and ensure it has registered DUST using the Preprod faucet linked in the env template. Wait until funding is reflected on-chain.
-4. Run `yarn install`, `yarn compile`, then `MIDNIGHT_NETWORK=preprod yarn deploy` from the repository root. The helper waits for wallet sync and prints the resulting address in the final log entry.
-5. Save the printed address; `deployment.json` is also written locally and ignored by Git. For a Vercel UI banner, add `VITE_CONTRACT_ADDRESS` with that public address in Vercel's project environment settings and redeploy. The address is safe to publish; wallet seed/mnemonic is not.
+4. Run `yarn install` then `yarn deploy` from the repository root. The helper compiles, waits for wallet sync, deploys, and initializes the shared threshold. It prints the authentic Preprod address and writes it to ignored `deployment.json`.
+5. Add that public address as `VITE_CONTRACT_ADDRESS` in Vercel's project environment settings and redeploy. This is a one-time owner setup; end users never enter the address or run deployment commands. The address is safe to publish; the wallet seed/mnemonic is not.
 
 Deployment submits an on-chain transaction and requires a funded wallet; this
 repository does not deploy automatically during Vercel builds.

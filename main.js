@@ -44,14 +44,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const displayName = session?.user?.name?.trim() || session?.user?.email?.split('@')[0] || 'Account';
       const currentPage = window.location.pathname.replace(/\/+$/, '').split('/').pop() || 'index.html';
       const profilePage = currentPage === 'profile' || currentPage === 'profile.html';
-      const proofSection = profilePage && window.location.hash === '#proof-console-heading';
+      const proofPage = currentPage === 'proof' || currentPage === 'proof.html';
       accountLinks.forEach((link) => {
         link.href = signedIn ? 'profile.html' : 'auth.html';
         link.textContent = signedIn ? displayName : 'Sign in';
         if (signedIn) link.setAttribute('aria-label', `Open ${displayName}'s profile`);
-        link.classList.toggle('active', !signedIn && (currentPage === 'auth' || currentPage === 'auth.html') || signedIn && profilePage && !proofSection);
+        link.classList.toggle('active', !signedIn && (currentPage === 'auth' || currentPage === 'auth.html') || signedIn && profilePage);
       });
-      document.querySelectorAll('.proof-nav-link').forEach((link) => link.classList.toggle('active', proofSection));
+      document.querySelectorAll('.proof-nav-link').forEach((link) => link.classList.toggle('active', proofPage));
       document.querySelectorAll('a.nav-link[href="profile.html"], a.mobile-nav-link[href="profile.html"]').forEach((link) => {
         link.hidden = signedIn;
       });
