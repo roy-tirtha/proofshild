@@ -1,119 +1,262 @@
-# ProofShield — Midnight Sealed-Bid Auction
+# 🛡️ ProofShield
 
-![Midnight CI](https://github.com/roy-tirtha/proofshild/actions/workflows/ci.yml/badge.svg)
+**A sealed-bid auction dApp on Midnight. Bids are committed privately while bidding is open, then revealed and checked by a shared on-chain contract.**
 
-ProofShield is a sealed-bid auction dApp built with Midnight Compact. It uses one shared Multi-Auction contract on Midnight Preprod: creating an auction creates a new auction ID within that one contract; it never deploys a new contract per auction. Lace and 1AM wallet support is available from the navbar.
+[![Midnight CI](https://github.com/roy-tirtha/proofshild/actions/workflows/ci.yml/badge.svg)](https://github.com/roy-tirtha/proofshild/actions/workflows/ci.yml) · **Midnight Preprod** · [Live app](https://proofshild.vercel.app/)
 
-## Product Idea
+## 🎥 Demo
 
-ProofShield lets communities run sealed-bid auctions where bid values remain hidden while bidding is open, while the final qualifying result is verifiable on-chain. Auction metadata is shared through MongoDB Atlas so participants can discover auctions, while Midnight enforces each auction lifecycle and verifies that every revealed bid matches the commitment submitted earlier.
+[![Watch the ProofShield sealed-bid auction demo](https://img.youtube.com/vi/QQnQySut1N4/maxresdefault.jpg)](https://youtu.be/QQnQySut1N4)
 
-## Architecture
+**Navigate:** [Overview](#overview) · [How it works](#how-it-works) · [Privacy](#privacy-model) · [Features](#implemented-features) · [Quick start](#quick-start) · [Tests](#testing) · [Deployment](#deployment) · [Evidence](#evidence)
 
-| Layer | Responsibility |
+<a id="overview"></a>
+## 🛡️ Overview
+
+ProofShield lets a community run an auction without showing bid amounts while bidding is still open. A bidder first submits a commitment: a cryptographic fingerprint made from the bid amount and a random salt. After the creator closes bidding, bidders reveal their bids. The contract checks each reveal against its earlier commitment and tracks the highest revealed bid that meets the reserve.
+
+The app uses Midnight's Compact language to define the smart contract rules. Each auction has a separate ID and state inside **one shared contract**; creating an auction does not deploy a new contract.
+
+### A quick example
+
+Imagine an auction with a reserve of 10. A bidder chooses 15 and a random salt. During bidding, the contract receives the commitment hash, not the amount. After bidding closes, the bidder reveals 15 and the salt. The contract verifies the match and makes the revealed amount part of public auction state.
+
+This is a prototype commit-and-reveal auction. It does not verify a person's skills, credentials, or off-chain activity, and it does not hold or transfer auction funds.
+
+## 🎯 The problem
+
+In an open auction, later bidders can react to earlier visible bids. That can influence bidding strategy and expose what participants are willing to pay. ProofShield separates the bidding and reveal phases so amounts are not submitted to the contract during the bidding phase, while the final qualifying result can still be checked against contract rules.
+
+## 💡 Why Midnight and zero-knowledge proofs?
+
+Midnight is the blockchain network this app targets. Its Compact contract describes state changes and the conditions under which they are valid. For contract calls, Midnight's proof system lets a wallet submit a proof that the call follows those rules; the network verifies the proof and applies the state transition.
+
+In ProofShield, **the sealed-bid behavior comes from commit-and-reveal**: during bidding, the contract receives a hash instead of the amount. The proof system validates contract calls, such as whether a reveal matches a commitment or whether the creator knows the secret used to authorize a transition. Revealing intentionally makes the amount public. This is not a proof about external credentials or an activity-count threshold.
+
+<a id="how-it-works"></a>
+## 🧠 How it works
+
+```mermaid
+flowchart LR
+    subgraph Browser
+        UI[Create, bid, reveal UI]
+        Secret[Bid amount + random salt]
+        Hash[bid_commitment hash]
+        Local[Encrypted browser records]
+        Connector[Lace or 1AM wallet connector]
+        UI --> Secret
+        Secret --> Hash
+        Secret --> Local
+        UI --> Connector
+    end
+    Hash -->|commit_bid: auction ID + commitment| Contract[Shared Compact contract on Preprod]
+    Connector -->|Generate proof, balance and submit transaction| Contract
+    Contract -->|Public ledger state| Indexer[Midnight indexer]
+    Indexer --> UI
+    UI -->|Title, creator wallet, public transaction references| API[Express or Vercel API]
+    API --> DB[(MongoDB Atlas)]
+    Artifacts[Published proving configuration] --> Connector
+```
+
+1. **Create:** A signed-in creator connects a Lace or 1AM wallet, chooses a title and positive reserve, and creates an auction ID in the shared Preprod contract. The app stores the creator secret in encrypted browser storage and publishes the title and public transaction reference to the catalogue API.
+2. **Commit:** A bidder enters a whole-number amount. The browser generates a random 32-byte salt, calculates `bid_commitment(amount, salt)`, saves the amount and salt locally, and submits only the auction ID and commitment to `commit_bid`.
+3. **Close:** The creator submits `close_bidding` with their secret. The contract checks it against the stored owner commitment and moves the auction into the reveal phase.
+4. **Reveal:** A bidder submits each saved amount and salt through `reveal_bid`. The contract checks the commitment, records the revealed amount, and updates the highest bid if it meets the reserve.
+5. **Finalize:** The creator calls `finalize_auction`. Anyone can read the finalized result from the public contract state.
+
+The browser fetches the compiled contract's proving configuration from the app's static artifact path and asks the connected wallet's Midnight dApp Connector proof provider to prepare transactions. The wallet balances and submits approved transactions. The browser reads contract state through Midnight's Preprod indexer. MongoDB backs the application catalogue, accounts, wallet links, and transaction activity; it is not the source of auction state.
+
+<a id="privacy-model"></a>
+## 🔐 Privacy model
+
+| Data | What happens in this implementation |
 | --- | --- |
-| Midnight Preprod | One hardcoded contract address; auction IDs, phases, reserves, commitments, reveals, and winning bids |
-| Browser + wallet | Wallet approvals; random bid salts; creator secret and unrevealed bid records encrypted in browser storage |
-| MongoDB Atlas | Public auction catalogue, linked wallets, account records, and public transaction references |
-| Vercel | Static frontend plus serverless API routes; no Render backend is needed |
+| Private input: bid amount and random salt | Created in the browser and saved in encrypted local storage. During `commit_bid`, only the commitment hash is submitted. During `reveal_bid`, the amount is intentionally disclosed into ledger state; the contract does not store the salt as a ledger field. |
+| Private input: `owner_secret` | Used by `create_auction`, `close_bidding`, and `finalize_auction` to calculate/check an owner commitment. The secret itself is not written into the contract ledger; the creator record is stored in this browser. |
+| Public inputs/state | Auction ID, reserve, phase, commitment hashes and counts, reveal count, revealed bid amounts, highest qualifying bid, winning commitment, and transaction references. Catalogue title and creator wallet label are stored in MongoDB. |
+| What the contract checks | Positive reserve and unique auction ID; phase rules; no duplicate commitment; creator knowledge of the committed secret; reveal matches a submitted, unrevealed commitment; reserve and highest-bid calculation. |
+| What a verifier learns | The network verifies that each transaction satisfies the circuit rules and applies the disclosed state changes. During bidding it sees the commitment, not the bid amount. After reveal, the amount and resulting auction state are public. |
+| What is not guaranteed | The app cannot recover browser data if it is cleared or lost. The browser derives its encryption key from random material also stored in local storage, so this is not a hardware-backed vault. The contract does not escrow funds, force a bidder to reveal, or verify off-chain facts. |
 
-contract-address.js is the single source of truth for the shared Preprod address. The address is hardcoded there, and the API imports the same value, so all users and all pages submit to the same contract.
+The privacy boundary is important: commitments conceal amounts during the commit phase when bidders use the app correctly and keep their amounts private. Once an amount is revealed, it is public. A compromised browser or leaked local storage can expose records before then.
 
-## Privacy Model
+<a id="implemented-features"></a>
+## ✨ Implemented features
 
-### Public state
+- **Shared auction contract:** Five Compact circuits—`create_auction`, `commit_bid`, `close_bidding`, `reveal_bid`, and `finalize_auction`—manage multiple auction IDs in one contract.
+- **Auction rules:** Positive reserves, creator-secret authorization, unique auction IDs and commitments, phase checks, verified reveals, and highest qualifying revealed bid.
+- **Browser flows:** Create auctions, browse the MongoDB catalogue with state read from Preprod, seal bids, close bidding, reveal saved bids, and finalize/view results.
+- **Wallet support:** Lace and 1AM wallet connection through the Midnight dApp Connector, with wallet approval for transactions.
+- **Local private records:** Bid data and creator secrets are encrypted in browser storage and are not sent to the catalogue API.
+- **Accounts and catalogue:** Better Auth supports email/password accounts and optional Google OAuth. MongoDB stores account data, wallet links, public auction listings, and transaction references.
+- **Proof configuration:** Compiled ZK configuration is copied to the static output for browser use. Browser transactions use the wallet's dApp Connector proof provider; local Node integration tests and deployment use the HTTP proof provider.
 
-Observers can see the auction ID, phase, reserve, number of sealed commitments, number of revealed bids, the highest qualifying revealed bid, and the winning commitment. The shared auction catalogue includes only title, creator wallet label, creation time, and public transaction references.
+### Prototype boundaries
 
-### Private witness and browser data
+- Auctions target Midnight Preprod; the browser client explicitly requires the wallet to be connected to Preprod.
+- Catalogue titles, accounts, linked wallets, and activity history depend on MongoDB configuration. Email/password auth is implemented; Google sign-in requires OAuth credentials.
+- Bid and creator records depend on the same browser profile's local storage. Clearing it can make reveals or creator-only actions impossible.
+- The contract does not transfer payments, escrow funds, or enforce a time-based deadline. The creator manually closes bidding and can finalize after the reveal phase.
+- No credential provider, external activity adapter, standalone verifier portal, or in-app ZK proof inspector is present in the current auction app.
 
-A bid amount and a random 32-byte salt create a domain-separated commitment hash. During the bidding phase Midnight receives only that opaque hash—not the amount or salt. When a bidder chooses to reveal, the contract verifies the pre-existing commitment and then intentionally publishes the amount. Creator authorization uses a secret whose commitment is on-chain, while the secret itself remains encrypted in that creator’s browser. MongoDB never receives bid amounts, salts, or creator secrets.
+## 🧰 Tech stack
 
-This is the observable privacy behavior: a sealed bid increments the public commitment count but reveals no amount; after the reveal transaction, that same verified amount can affect the public winner.
+| Area | Technology in this repository |
+| --- | --- |
+| Smart contract | Midnight Compact (`contract/proofshield.compact`) |
+| Midnight client and wallet | Midnight JS, Wallet SDK, dApp Connector API |
+| Frontend | Static HTML, CSS, and JavaScript bundled with Vite; React/Vite tooling is installed, but the current pages are not a React application |
+| Server/API | Node.js 22+, Express for local development, Vercel serverless routes |
+| Data and authentication | MongoDB driver, Better Auth |
+| Proof generation | Wallet dApp Connector provider in the browser; HTTP proof provider for Node integration/deployment flows |
+| Local proof service | Midnight proof server 8.1.0 in `compose.yml` |
+| Tests | Vitest and Midnight Testkit |
+| Package manager | Yarn Classic 1.22.22 |
 
-## Contract lifecycle
+The contract declares Compact `language_version 0.23`; the GitHub Actions workflow installs Compact CLI **0.31.1**. The repository requires Node.js **22 or newer**.
 
-1. Deploy the shared contract once to Preprod.
-2. Hardcode the emitted address in contract-address.js.
-3. A signed-in creator connects Lace or 1AM and calls create_auction(auctionId, reserve, ownerSecret).
-4. A bidder calls commit_bid(auctionId, commitment) using a locally generated amount/salt pair.
-5. The creator calls close_bidding; bidders call reveal_bid; then the creator calls finalize_auction.
+<a id="quick-start"></a>
+## 🚀 Quick start
 
-The Compact contract has five circuits: create_auction, commit_bid, close_bidding, reveal_bid, and finalize_auction. contract/managed/ contains their generated circuits and proving keys.
+### Requirements
 
-## Local setup
+- Node.js 22 or newer and Yarn 1.22.x
+- Compact CLI 0.31.1, matching the version configured in GitHub Actions
+- A MongoDB Atlas connection string for the local Express server and account/catalogue APIs
+- Lace or 1AM wallet on Midnight Preprod for on-chain app actions
+- Google OAuth credentials only if you want Google sign-in
+- Docker Compose plus a local Midnight node and indexer for the local integration-test network
 
-Requirements: Node.js 22+, Yarn 1.x, Compact CLI 0.23 compatible toolchain, a Lace or 1AM wallet configured for Preprod, and MongoDB Atlas for auth/catalogue features.
+### Install and configure
 
-~~~bash
-yarn install
+```bash
+git clone https://github.com/roy-tirtha/proofshild.git
+cd proofshild
+yarn install --frozen-lockfile
+cp .env.example .env
+```
+
+Edit `.env` and replace the MongoDB placeholder with a working Atlas URI. Set `MONGODB_DB_NAME` (defaults to `proofshield`) and a random `BETTER_AUTH_SECRET` of at least 32 characters. The server connects to MongoDB during startup, so a valid `MONGODB_URI` is required even for local development. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` only if enabling Google sign-in; configure its callback as `http://localhost:3000/api/auth/callback/google`.
+
+Compile the contract, then build the frontend:
+
+```bash
 yarn compile
-yarn test
 yarn build
+```
+
+`yarn compile` regenerates the committed `contract/managed/proofshield` compiler artifacts and proving files. `yarn build` bundles the pages and copies those artifacts into the generated `public/contract/managed/` directory.
+
+Start the local Express server:
+
+```bash
 yarn server
-~~~
+```
 
-Open http://localhost:3000. For Vite hot reload, run yarn server and yarn dev in separate terminals, then use http://localhost:5173. Google OAuth needs both local origins/callbacks configured if you use both addresses.
+Open [http://localhost:3000](http://localhost:3000). For Vite hot reload, keep `yarn server` running and run `yarn dev` in another terminal; open [http://localhost:5173](http://localhost:5173). Vite forwards `/api` requests to the Express server on port 3000.
 
-## Deployed shared contract
+### Local proof services
 
-ProofShield uses this one Midnight Preprod multi-auction contract:
+`yarn proof:up` starts the Midnight proof server defined in `compose.yml` on `127.0.0.1:6300`; `yarn proof:down` stops it. The local integration-test network also needs a Midnight node at `127.0.0.1:9944` and indexer at `127.0.0.1:8088`. Network endpoints are defined in [`contract/src/config.ts`](./contract/src/config.ts). The browser app itself targets Preprod and gets proof support from the connected wallet.
 
-`b0bd1feb64dadad51e987f6ba8e08adaa26945b3135b44c014c8f08a56bbae89`
+<a id="testing"></a>
+## 🧪 Testing
 
-Regular users never deploy contracts. They create, bid on, reveal, and finalize auction IDs through the shared contract. The address is configured in `contract-address.js`, the single source of truth for the frontend and API.
+Run the contract logic tests:
 
-Maintainers only: a replacement deployment requires a funded Preprod wallet, an ignored `.env.preprod` with exactly one of `MIDNIGHT_PREPROD_MNEMONIC` or `MIDNIGHT_PREPROD_SEED`, and `yarn deploy`. Update `contract-address.js` only after verifying the replacement deployment.
+```bash
+yarn test
+```
 
-## Vercel, Atlas, and OAuth
+This command runs `contract/src/test/proofshield-logic.test.ts` and currently contains **6 tests**. They exercise multiple auctions in one state, duplicate IDs and reserves, hidden amounts before reveal, creator authorization, commitment validation, reserve/highest-bid selection, and independent auction phases. They run against the Compact runtime in-process; they do not submit transactions to a live network.
 
-Vercel is serverless-ready: deploy the repository directly; do not deploy a separate Render backend. Set these server-only Vercel environment variables:
+The network integration scenario is separate:
 
-~~~text
-MONGODB_URI
-MONGODB_DB_NAME=proofshield
-BETTER_AUTH_URL=https://proofshild.vercel.app
-BETTER_AUTH_SECRET
-GOOGLE_CLIENT_ID
-GOOGLE_CLIENT_SECRET
-~~~
+```bash
+yarn test:integration
+```
 
-Do not place MongoDB or Google secrets in VITE_* variables. In Google Cloud, add:
+It deploys a contract and submits create, commit, close, reveal, and finalize transactions. It defaults to the local network and needs the local node, indexer, proof server, and a funded test wallet. For Preprod or Preview, use `yarn test:preprod` or `yarn test:preview` with a funded wallet and exactly one of `MIDNIGHT_PREPROD_MNEMONIC` / `MIDNIGHT_PREPROD_SEED` or `MIDNIGHT_PREVIEW_MNEMONIC` / `MIDNIGHT_PREVIEW_SEED`. The `test:preprod` and `test:preview` scripts run network transactions and may incur network fees.
 
-- JavaScript origins: https://proofshild.vercel.app, http://localhost:3000, and optionally http://localhost:5173
-- Redirect URIs: https://proofshild.vercel.app/api/auth/callback/google, http://localhost:3000/api/auth/callback/google, and optionally http://localhost:5173/api/auth/callback/google
+GitHub Actions runs install, Compact compile, frontend build, and `yarn test` on pushes and pull requests. **No tests or build were run while preparing this README.** The screenshots in [Evidence](#evidence) are historical captures, not a test result for the current commit.
 
-## Validation and submission
+<a id="deployment"></a>
+## 🌐 Deployment
 
-~~~bash
-yarn compile   # generates managed circuits and keys
-yarn test      # six Compact circuit tests
-yarn build     # Vercel production build
-~~~
+The repository configures the browser app for Midnight Preprod and includes this shared contract address in [`contract-address.js`](./contract-address.js):
 
-GitHub Actions runs compile, tests, and build on pushes and pull requests. The repository already exceeds the minimum 10 meaningful commits.
+| Network | Address | Evidence/status |
+| --- | --- | --- |
+| Midnight Preprod | `b0bd1feb64dadad51e987f6ba8e08adaa26945b3135b44c014c8f08a56bbae89` | Configured in the app; [`public/mid_explorer.png`](./public/mid_explorer.png) captures it as deployed in the Midnight Explorer. The live explorer was not independently re-queried for this README. |
 
-## Live demo and walkthrough
+The hosted app URL documented by the repository is [proofshild.vercel.app](https://proofshild.vercel.app/). Vercel is configured to run `yarn install --frozen-lockfile` and `yarn build`, then serve `dist/` and the API routes. The server-side API needs MongoDB and Better Auth environment variables configured in the Vercel project.
 
-- Live dApp: [proofshild.vercel.app](https://proofshild.vercel.app/)
-- Demo video: [ProofShield sealed-bid auction walkthrough](https://youtu.be/QQnQySut1N4)
+Maintainers can deploy a replacement contract with `yarn deploy`. The script compiles the contract and deploys to Preview or Preprod (not `local`) using a funded wallet. Set `MIDNIGHT_NETWORK=preview` or `preprod` and exactly one matching mnemonic or seed in `.env.preview` or `.env.preprod`. Never commit or share those files. A deployment writes a local `deployment.json` and does not automatically update `contract-address.js`; update the app address only after confirming a deployment.
 
-### Evidence screenshots
+<a id="evidence"></a>
+## 📸 Evidence
 
-**Compact compile output** — the five generated contract circuits:
+These are the original evidence images tracked in the repository and referenced in its README history. They show captured runs or state at the time the screenshots were taken; they do not certify the current revision.
 
-![Successful Compact compile with generated circuits](public/yarn_compile.png)
+### Compact compilation
 
-**Test output** — passing contract tests:
+![Terminal capture of Compact compiling the ProofShield circuits](public/yarn_compile.png)
 
-![Passing contract test output](public/yarn_test.png)
+*Historical `yarn compile` output showing compilation completed for the contract circuits.*
 
-**Preprod deployment** — deployed contract shown in the Midnight explorer:
+### Contract logic tests
 
-![ProofShield contract deployed on Midnight Preprod](public/mid_explorer.png)
+![Terminal capture of the six ProofShield contract logic tests](public/yarn_test.png)
 
-**CI/CD workflow** — GitHub Actions pipeline evidence:
+*Historical `yarn test` output reports 6 tests passed. The capture also shows a source-map warning about missing source files.*
 
-![ProofShield CI/CD workflow](public/ci_cd.png)
+### Preprod deployment
 
-For submission, retain the original image files in `public/` and the published demo link above. Product-idea approval is an external organizer process and must be submitted separately if it has not already been approved.
+![Midnight Explorer capture showing the ProofShield contract deployed on Preprod](public/mid_explorer.png)
+
+*Explorer capture of the configured contract address on Preprod, with a `finalize_auction` entry point and ledger state.*
+
+### GitHub Actions
+
+![GitHub Actions workflow history for the Midnight CI workflow](public/ci_cd.png)
+
+*Historical workflow list with successful runs on earlier `main` commits; it is not a status report for the current commit.*
+
+These are the four original evidence screenshots found in the current tree and README history. No separate screenshots of the app UI, proof generation, proof verification, or a privacy inspector are present in the repository history. `src/assets/hero.png` is an app asset, not a project-evidence screenshot.
+
+## 📁 Project structure
+
+```text
+proofshild/
+├── api/                 # Vercel serverless API routes
+├── assets/              # ProofShield logo and hero artwork
+├── contract/
+│   ├── managed/          # Generated Compact bindings, keys, and ZK artifacts
+│   ├── src/              # Network providers, wallet setup, and tests
+│   └── proofshield.compact
+├── public/              # Static assets and compiled browser proof artifacts
+├── scripts/             # Build-time artifact copy
+├── server/              # Express server, auth, catalogue, and activity handlers
+├── *.html, *.js, *.css  # Current browser application
+├── compose.yml           # Local proof server
+└── package.json          # Scripts and dependencies
+```
+
+## 🗺️ Roadmap and project status
+
+No current roadmap for the auction implementation is maintained in the repository. An older README in Git history described a technical-achievement verifier and a multi-level roadmap; that earlier product concept does not match the current auction contract or UI, so those milestones are not presented as current plans here.
+
+## 📚 Further reading
+
+- [Compact contract](./contract/proofshield.compact)
+- [Browser transaction and proof-provider integration](./proof-client.js)
+- [Network configuration](./contract/src/config.ts)
+- [Provider setup for Node tests and deployment](./contract/src/providers.ts)
+- [Circuit logic tests](./contract/src/test/proofshield-logic.test.ts)
+- [Network integration test](./contract/src/test/proofshield.test.ts)
+- [Environment variable template](./.env.example)
+- [GitHub Actions workflow](./.github/workflows/ci.yml)
+
+## 📄 License
+
+No `LICENSE` file is present in the repository, so the project does not currently declare a license.
