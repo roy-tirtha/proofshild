@@ -41,16 +41,20 @@ async function loadPrivateRecords() {
   if (!password) throw new Error('Connect your wallet before accessing private auction data.');
   const encrypted = localStorage.getItem(privateRecordKey());
   if (!encrypted) return emptyPrivateRecords();
-  try {
-    const record = JSON.parse(encrypted);
-    const key = await deriveEncryptionKey(password, hexToBytes(record.salt));
-    const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: hexToBytes(record.iv) }, key, Uint8Array.from(atob(record.data), (char) => char.charCodeAt(0)));
-    const value = JSON.parse(new TextDecoder().decode(plaintext));
-    if (value.version !== 1 || !Array.isArray(value.bids)) throw new Error('Invalid private record.');
-    return value;
-  } catch {
-    throw new Error('Could not open the encrypted bid data for this wallet and contract.');
+  const legacyKey = `proofshield:auction-device-key:${contractAddress}:${connectedAddress.toLowerCase()}`;
+  const passwords = [...new Set([password, localStorage.getItem(legacyKey)].filter(Boolean))];
+  const record = JSON.parse(encrypted);
+  for (const candidate of passwords) {
+    try {
+      const key = await deriveEncryptionKey(candidate, hexToBytes(record.salt));
+      const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: hexToBytes(record.iv) }, key, Uint8Array.from(atob(record.data), (char) => char.charCodeAt(0)));
+      const value = JSON.parse(new TextDecoder().decode(plaintext));
+      if (value.version !== 1 || !Array.isArray(value.bids)) continue;
+      if (candidate !== password) await savePrivateRecords(value);
+      return value;
+    } catch {}
   }
+  throw new Error('Could not unlock private auction data from this browser. Existing creator keys and bid salts were preserved; do not clear site storage.');
 }
 
 async function savePrivateRecords(records) {
