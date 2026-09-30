@@ -101,4 +101,22 @@ yarn build     # Vercel production build
 
 GitHub Actions runs compile, tests, and build on pushes and pull requests. The repository already exceeds the minimum 10 meaningful commits.
 
+### Evidence screenshots
+
+**Compact compile output** — the five generated contract circuits:
+
+![Successful Compact compile with generated circuits](public/yarn_compile.png)
+
+**Test output** — passing contract tests:
+
+![Passing contract test output](public/yarn_test.png)
+
+**Preprod deployment** — deployed contract shown in the Midnight explorer:
+
+![ProofShield contract deployed on Midnight Preprod](public/mid_explorer.png)
+
+**CI/CD workflow** — GitHub Actions pipeline evidence:
+
+![ProofShield CI/CD workflow](public/ci_cd.png)
+
 Still required from the organizer after the one-time deployment: commit the hardcoded contract address, push it, verify a green CI run, submit the product proposal for approval, and add screenshots plus the one-minute demo video.
