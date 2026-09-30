@@ -11,8 +11,8 @@ import { CONTRACT_ADDRESS, requireContractAddress } from './contract-address.js'
 
 const networkId = 'preprod';
 const artifactBase = `${window.location.origin}/contract/managed/proofshield`;
-const privateStateId = 'ProofShieldAuctionBrowserState';
-const privateStateDatabase = 'proofshield-sealed-auction-v1';
+const privateStateId = 'ProofShieldAuctionBrowserStateV2';
+const privateStateDatabase = 'proofshield-sealed-auction-v2';
 const compiledContract = CompiledContract.make('ProofShieldAuction', Contract)
   .pipe(CompiledContract.withVacantWitnesses);
 
@@ -100,6 +100,7 @@ export async function createAuctionSession(api, storagePassword) {
   }
   const [config, addresses] = await Promise.all([api.getConfiguration(), api.getShieldedAddresses()]);
   debugProofShield('auction.session.wallet-ready', { networkId: config.networkId, hasIndexer: Boolean(config.indexerUri && config.indexerWsUri) });
+  debugProofShield('auction.session.private-state-store', { version: 2 });
   if (config.networkId !== networkId) {
     throw new Error(`Wallet is connected to ${config.networkId}, but this contract targets Preprod.`);
   }
