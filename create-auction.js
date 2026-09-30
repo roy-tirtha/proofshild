@@ -76,6 +76,12 @@ button.addEventListener('click', async () => {
         await session.dispose().catch(() => {});
       }
     }
+    const invalidListingFields = [];
+    if (!/^[0-9a-f]{64}$/i.test(auctionIdHex || '')) invalidListingFields.push('auction ID');
+    if (typeof title !== 'string' || title.trim().length < 1 || title.trim().length > 100) invalidListingFields.push('title');
+    if (typeof walletAddress !== 'string' || walletAddress.trim().length < 1 || walletAddress.length > 256) invalidListingFields.push('creator wallet');
+    if (typeof transactionId !== 'string' || transactionId.length < 1 || transactionId.length > 256) invalidListingFields.push('creation transaction reference');
+    if (invalidListingFields.length) throw new Error(`The saved auction cannot be published because its ${invalidListingFields.join(', ')} ${invalidListingFields.length === 1 ? 'is' : 'are'} invalid. The auction transaction already exists; keep this browser data and retry after fixing the issue.`);
     setStatus('Publishing the on-chain auction to the shared catalogue…');
     const response = await fetch('/api/auctions', {
       method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },

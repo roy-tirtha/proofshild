@@ -18,9 +18,12 @@ export async function handleAuctions(request, response) {
     const user = await auth.api.getSession({ headers: request.headers }).then((session) => session?.user);
     if (!user) return respond(response, 401, { error: 'Sign in before publishing an auction.' });
     const { auctionId, title, creatorWallet, transactionId } = request.body ?? {};
-    if (!validAuctionId(auctionId) || typeof title !== 'string' || title.trim().length < 1 || title.trim().length > 100 || typeof creatorWallet !== 'string' || creatorWallet.trim().length < 1 || creatorWallet.length > 256 || typeof transactionId !== 'string' || transactionId.length < 1 || transactionId.length > 256) {
-      return respond(response, 400, { error: 'Auction ID, title, creator wallet, and creation transaction are required.' });
-    }
+    const invalidFields = [];
+    if (!validAuctionId(auctionId)) invalidFields.push('auctionId must be 64 hexadecimal characters');
+    if (typeof title !== 'string' || title.trim().length < 1 || title.trim().length > 100) invalidFields.push('title must contain 1–100 characters');
+    if (typeof creatorWallet !== 'string' || creatorWallet.trim().length < 1 || creatorWallet.length > 256) invalidFields.push('creatorWallet must contain 1–256 characters');
+    if (typeof transactionId !== 'string' || transactionId.length < 1 || transactionId.length > 256) invalidFields.push('transactionId must contain 1–256 characters');
+    if (invalidFields.length) return respond(response, 400, { error: `Invalid auction entry: ${invalidFields.join('; ')}.` });
     const existing = await collection.findOne({ auctionId: auctionId.toLowerCase() });
     if (existing && existing.creatorUserId !== user.id) return respond(response, 409, { error: 'This auction ID is already listed by another account.' });
     const auction = { auctionId: auctionId.toLowerCase(), contractAddress: CONTRACT_ADDRESS.toLowerCase(), title: title.trim(), creatorWallet: creatorWallet.trim(), creatorUserId: user.id, createTransactionId: transactionId, network: 'preprod', createdAt: existing?.createdAt ?? new Date() };
