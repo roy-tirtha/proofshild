@@ -30,6 +30,9 @@ async function saveEncryptedOwnerRecord(client, auctionId, password, ownerSecret
 }
 
 function pendingKey() { return `proofshield:pending-auction:${walletAddress.toLowerCase()}`; }
+function validPendingAuction(value) {
+  return Boolean(value && /^[0-9a-f]{64}$/i.test(value.auctionId || '') && typeof value.title === 'string' && value.title.trim().length >= 1 && value.title.trim().length <= 100 && typeof value.reserve === 'string' && /^[1-9]\d*$/.test(value.reserve) && typeof value.transactionId === 'string' && value.transactionId.length >= 1 && value.transactionId.length <= 256);
+}
 
 window.addEventListener('proofshield:wallet-connected', (event) => {
   walletApi = event.detail.api;
@@ -50,7 +53,11 @@ button.addEventListener('click', async () => {
   button.disabled = true;
   try {
     await sessionUser();
-    const pending = JSON.parse(localStorage.getItem(pendingKey()) || 'null');
+    let pending = JSON.parse(localStorage.getItem(pendingKey()) || 'null');
+    if (pending && !validPendingAuction(pending)) {
+      pending = null;
+      setStatus('The saved draft has incomplete identifiers. I’ll create a fresh auction ID and transaction, then publish that new auction. The earlier on-chain auction remains unchanged.');
+    }
     const title = pending?.title || document.getElementById('create-title').value.trim();
     const reserve = pending?.reserve || document.getElementById('create-reserve').value;
     if (!title || title.length > 100) throw new Error('Enter a title between 1 and 100 characters.');
