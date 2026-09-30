@@ -91,6 +91,24 @@ async function ensureApplicationCollections(database) {
         },
       },
     },
+    {
+      name: 'auction_events',
+      validator: {
+        $jsonSchema: {
+          bsonType: 'object',
+          required: ['contractAddress', 'action', 'walletAddress', 'userId', 'network', 'createdAt'],
+          properties: {
+            contractAddress: { bsonType: 'string', pattern: '^[0-9a-fA-F]{64}$' },
+            action: { enum: ['auction_deployed', 'bidding_started', 'bid_committed', 'bidding_closed', 'bid_revealed', 'winner_declared'] },
+            transactionId: { bsonType: 'string', minLength: 1, maxLength: 256 },
+            walletAddress: { bsonType: 'string', minLength: 1, maxLength: 256 },
+            userId: { bsonType: 'string', minLength: 1 },
+            network: { enum: ['preprod'] },
+            createdAt: { bsonType: 'date' },
+          },
+        },
+      },
+    },
   ];
 
   const existing = new Set((await database.listCollections({}, { nameOnly: true }).toArray()).map((entry) => entry.name));
@@ -109,6 +127,11 @@ async function ensureApplicationCollections(database) {
   await database.collection('wallet_links').createIndex({ userId: 1, network: 1 }, { name: 'wallets_by_user_network' });
   await database.collection('auctions').createIndex({ contractAddress: 1 }, { unique: true, name: 'unique_auction_contract' });
   await database.collection('auctions').createIndex({ createdAt: -1 }, { name: 'auctions_newest_first' });
+  await database.collection('auction_events').createIndex(
+    { contractAddress: 1, transactionId: 1 },
+    { unique: true, sparse: true, name: 'unique_auction_transaction' },
+  );
+  await database.collection('auction_events').createIndex({ userId: 1, createdAt: -1 }, { name: 'auction_events_by_user' });
 }
 
 export function getDb() {

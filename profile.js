@@ -89,6 +89,28 @@ function renderChainHistory(entries) {
   }));
 }
 
+function renderAuctionHistory(events) {
+  const list = byId('auction-history');
+  if (!events.length) {
+    addEmptyMessage(list, 'No auction activity has been saved for this account yet.');
+    return;
+  }
+  list.replaceChildren();
+  events.forEach((event) => addHistoryItem(list, {
+    title: event.action.replaceAll('_', ' '),
+    detail: `${event.contractAddress.slice(0, 10)}…${event.contractAddress.slice(-8)} · ${formatDate(event.createdAt)}`,
+    hash: event.transactionId,
+    status: 'Saved to Atlas',
+  }));
+}
+
+async function loadAuctionHistory() {
+  const response = await fetch('/api/auction-events', { credentials: 'include' });
+  if (!response.ok) throw new Error('Could not load saved auction activity.');
+  const result = await response.json();
+  renderAuctionHistory(result.events ?? []);
+}
+
 async function initializeProfile() {
   const response = await fetch('/api/auth/get-session', { credentials: 'include' });
   const session = response.ok ? await response.json() : null;
@@ -104,8 +126,9 @@ async function initializeProfile() {
   byId('profile-created').textContent = formatDate(user.createdAt);
   byId('profile-loading').hidden = true;
   byId('profile-view').hidden = false;
-  const results = await Promise.allSettled([loadWallets()]);
+  const results = await Promise.allSettled([loadWallets(), loadAuctionHistory()]);
   if (results[0].status === 'rejected') addEmptyMessage(byId('wallet-list'), results[0].reason.message);
+  if (results[1].status === 'rejected') addEmptyMessage(byId('auction-history'), results[1].reason.message);
 }
 
 window.addEventListener('proofshield:wallet-connected', async (event) => {

@@ -5,7 +5,7 @@ const shorten = (value) => `${value.slice(0, 10)}…${value.slice(-8)}`;
 async function readApiJson(response) {
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('application/json')) {
-    throw new Error(`Auction API returned HTML instead of JSON (HTTP ${response.status}). On localhost, run both yarn server and yarn dev; on Vercel, deploy the latest API files.`);
+    throw new Error(`The auction API route returned HTML rather than JSON (HTTP ${response.status}). Open the local app at http://localhost:3000, or redeploy the current Vercel commit containing api/auctions.js.`);
   }
   return response.json();
 }

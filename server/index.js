@@ -7,6 +7,7 @@ import { toNodeHandler } from 'better-auth/node';
 import { auth, getAuthConfig } from './auth.js';
 import { handleDeleteWallet, handleWalletRecords } from './records.js';
 import { handleAuctions } from './auctions.js';
+import { handleAuctionEvents } from './auction-events.js';
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ app.use(express.urlencoded({ extended: true }));
 app.all('/api/wallets', handleWalletRecords);
 app.all('/api/wallets/:id', handleDeleteWallet);
 app.all('/api/auctions', handleAuctions);
+app.all('/api/auction-events', handleAuctionEvents);
 
 // System telemetry and auth status endpoint
 app.get('/api/system/status', (req, res) => {

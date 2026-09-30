@@ -13,9 +13,23 @@ if (!/^[0-9a-f]{64}$/i.test(contractAddress)) contractAddress = defaultContractA
 const view = document.body.dataset.auctionView || 'bid';
 const byId = (id) => document.getElementById(id);
 const phases = ['Not started', 'Bidding open', 'Reveal open', 'Finished'];
+const activityForCircuit = {
+  commit_bid: 'bid_committed',
+  close_bidding: 'bidding_closed',
+  reveal_bid: 'bid_revealed',
+  finalize_auction: 'winner_declared',
+};
 
 function setMessage(message) {
   byId('auction-message').textContent = message;
+}
+
+async function readAuctionApi(response) {
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error(`The auction API route returned HTML rather than JSON (HTTP ${response.status}). Open the local app at http://localhost:3000, or redeploy the current Vercel commit containing api/auctions.js.`);
+  }
+  return response.json();
 }
 
 function bytesToHex(bytes) {
@@ -133,6 +147,16 @@ function renderState(state) {
   updateControls();
 }
 
+async function requireSignedIn() {
+  const response = await fetch('/api/auth/get-session', { credentials: 'include' });
+  const contentType = response.headers.get('content-type') || '';
+  if (!response.ok || !contentType.includes('application/json')) {
+    throw new Error('Sign in before submitting an auction transaction so its activity can be saved.');
+  }
+  const session = await response.json();
+  if (!session?.user) throw new Error('Sign in before submitting an auction transaction so its activity can be saved.');
+}
+
 async function refreshState() {
   try {
     const { readPreprodAuctionState } = await import('./proof-client.js');
@@ -164,8 +188,8 @@ async function showAuctionChooser() {
   const status = chooser.querySelector('#auction-picker-status');
   const list = chooser.querySelector('#auction-picker-list');
   try {
-    const response = await fetch('/api/auctions');
-    const payload = await response.json();
+    const response = await fetch('/api/auctions', { credentials: 'include' });
+    const payload = await readAuctionApi(response);
     if (!response.ok) throw new Error(payload.error || 'Auction catalogue is unavailable.');
     if (!payload.auctions.length) {
       status.textContent = 'No published auctions are available yet.';
@@ -214,6 +238,7 @@ async function showAuctionChooser() {
 
 async function withAuction(circuit, args) {
   if (!connectedWallet) throw new Error('Connect a Lace or 1AM wallet first.');
+  await requireSignedIn();
   const client = await import('./proof-client.js');
   const session = await client.createAuctionSession(connectedWallet, privateStatePassword);
   try {
@@ -221,8 +246,15 @@ async function withAuction(circuit, args) {
       setMessage(`Waiting for ${count} earlier wallet transaction${count === 1 ? '' : 's'} to confirm before continuing…`);
     });
     const result = await client.submitAuctionCircuit(session.providers, contractAddress, circuit, args);
+    const transactionId = client.transactionReference(result);
+    await client.recordAuctionActivity({
+      contractAddress,
+      action: activityForCircuit[circuit],
+      transactionId,
+      walletAddress: connectedAddress,
+    });
     await refreshState();
-    return result.txHash || result.txId || result.identifiers?.[0];
+    return transactionId;
   } finally {
     await session.dispose().catch(() => {});
   }

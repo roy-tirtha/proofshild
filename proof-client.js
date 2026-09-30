@@ -139,20 +139,48 @@ export async function submitAuctionCircuit(providers, contractAddress, circuitId
   return result.public;
 }
 
+export function transactionReference(result) {
+  const reference = result?.txHash ?? result?.txId ?? result?.identifiers?.[0];
+  if (typeof reference !== 'string' || reference.length === 0) {
+    throw new Error('Midnight finalized the transaction without a usable transaction identifier.');
+  }
+  return reference;
+}
+
+export async function recordAuctionActivity({ contractAddress, action, transactionId, walletAddress }) {
+  const response = await fetch('/api/auction-events', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ contractAddress, action, transactionId, walletAddress }),
+  });
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error(`Auction activity API returned an unexpected response (HTTP ${response.status}).`);
+  }
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error || 'Auction activity could not be saved.');
+  return body.event;
+}
+
 export async function deployAuctionWithProviders(providers) {
   const deployed = await deployContract(providers, {
     compiledContract,
     privateStateId,
     initialPrivateState: {},
   });
-  return deployed.deployTxData.public.contractAddress;
+  return {
+    contractAddress: deployed.deployTxData.public.contractAddress,
+    transactionId: transactionReference(deployed.deployTxData.public),
+  };
 }
 
 export async function deployAuctionFromConnectedWallet(api) {
   const password = await getAuctionPrivateStatePassword(api);
   const session = await createAuctionSession(api, password);
   try {
-    return await deployAuctionWithProviders(session.providers);
+    const deployment = await deployAuctionWithProviders(session.providers);
+    return deployment.contractAddress;
   } finally {
     await session.dispose().catch(() => {});
   }
