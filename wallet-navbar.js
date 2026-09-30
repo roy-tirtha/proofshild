@@ -16,19 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   window.proofshieldDeployAuction = async () => {
-    if (!connectedApi) throw new Error('Connect Lace or 1AM from this page first.');
-    if (liveRegion) liveRegion.textContent = 'Deploying the auction contract. Approve the deployment in your connected wallet…';
-    try {
-      const { deployAuctionFromConnectedWallet } = await import('./proof-client.js');
-      const address = await deployAuctionFromConnectedWallet(connectedApi);
-      localStorage.setItem('proofshield:auction-contract-address', address);
-      window.dispatchEvent(new CustomEvent('proofshield:auction-deployed', { detail: { address } }));
-      if (liveRegion) liveRegion.textContent = `Auction contract deployed on Preprod: ${address}`;
-      return address;
-    } catch (error) {
-      if (liveRegion) liveRegion.textContent = error instanceof Error ? error.message : 'Contract deployment failed.';
-      throw error;
-    }
+    throw new Error('Open the Auctions page to deploy. It collects the reserve and creates the encrypted creator authorization needed to close and finalize the auction.');
   };
 
   const updateButtons = (message) => {

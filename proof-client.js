@@ -183,11 +183,14 @@ export async function recordAuctionActivity({ contractAddress, action, transacti
   return body.event;
 }
 
-export async function deployAuctionWithProviders(providers) {
+export async function deployAuctionWithProviders(providers, reserve, ownerSecret) {
+  if (typeof reserve !== 'bigint' || reserve < 1n) throw new Error('A positive reserve is required to deploy an auction.');
+  if (!(ownerSecret instanceof Uint8Array) || ownerSecret.length !== 32) throw new Error('A 32-byte creator secret is required to deploy an auction.');
   const deployed = await deployContract(providers, {
     compiledContract,
     privateStateId,
     initialPrivateState: {},
+    args: [reserve, ownerSecret],
   });
   return {
     contractAddress: deployed.deployTxData.public.contractAddress,
@@ -195,11 +198,11 @@ export async function deployAuctionWithProviders(providers) {
   };
 }
 
-export async function deployAuctionFromConnectedWallet(api) {
+export async function deployAuctionFromConnectedWallet(api, reserve, ownerSecret) {
   const password = await getAuctionPrivateStatePassword(api);
   const session = await createAuctionSession(api, password);
   try {
-    const deployment = await deployAuctionWithProviders(session.providers);
+    const deployment = await deployAuctionWithProviders(session.providers, reserve, ownerSecret);
     return deployment.contractAddress;
   } finally {
     await session.dispose().catch(() => {});

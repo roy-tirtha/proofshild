@@ -28,8 +28,7 @@ export pure circuit owner_commitment(secret: Bytes<32>): Bytes<32> {
   ]);
 }
 
-export circuit start_auction(reserve: Uint<64>, owner_secret: Bytes<32>): [] {
-  assert(phase == AuctionPhase.UNINITIALIZED, "auction has already started");
+constructor(reserve: Uint<64>, owner_secret: Bytes<32>) {
   assert(reserve > 0, "reserve price must be positive");
   reserve_price = disclose(reserve);
   auction_owner_commitment = disclose(owner_commitment(owner_secret));

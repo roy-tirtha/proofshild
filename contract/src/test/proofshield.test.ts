@@ -71,17 +71,10 @@ describe(`ProofShield sealed auction (${network})`, () => {
       compiledContract: CompiledProofShieldContract,
       privateStateId: PRIVATE_STATE_ID,
       initialPrivateState: {},
-    });
-    contractAddress = deployed.deployTxData.public.contractAddress;
-    expect((await queryLedger()).phase).toBe(0);
-
-    await submitCallTx<Contract, 'start_auction'>(providers, {
-      compiledContract: CompiledProofShieldContract,
-      contractAddress,
-      privateStateId: PRIVATE_STATE_ID,
-      circuitId: 'start_auction',
       args: [5n, OWNER_SECRET],
     });
+    contractAddress = deployed.deployTxData.public.contractAddress;
+    expect((await queryLedger()).phase).toBe(1);
     const commitment = pureCircuits.bid_commitment(BID_AMOUNT, BID_SALT);
     await submitCallTx<Contract, 'commit_bid'>(providers, {
       compiledContract: CompiledProofShieldContract,

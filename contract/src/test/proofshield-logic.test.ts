@@ -12,9 +12,9 @@ const saltA = new Uint8Array(32).fill(7);
 const saltB = new Uint8Array(32).fill(8);
 const ownerSecret = new Uint8Array(32).fill(9);
 
-function newContract() {
+function newContract(reserve = 5n, secret = ownerSecret) {
   const contract = new Contract({});
-  const initial = contract.initialState(createConstructorContext({}, proverKeys.coinPublicKey));
+  const initial = contract.initialState(createConstructorContext({}, proverKeys.coinPublicKey), reserve, secret);
   const context = createCircuitContext(
     dummyContractAddress(),
     proverKeys.coinPublicKey,
@@ -25,32 +25,26 @@ function newContract() {
 }
 
 describe('ProofShield sealed-bid auction circuits', () => {
-  it('starts uninitialized with no commitments or revealed bids', () => {
+  it('deploys directly into the commit phase with no bids', () => {
     const { contract } = newContract();
-    const initial = contract.initialState(createConstructorContext({}, proverKeys.coinPublicKey));
+    const initial = contract.initialState(createConstructorContext({}, proverKeys.coinPublicKey), 5n, ownerSecret);
     const state = ledger(initial.currentContractState.data);
 
-    expect(state.phase).toBe(0);
-    expect(state.reserve_price).toBe(0n);
+    expect(state.phase).toBe(1);
+    expect(state.reserve_price).toBe(5n);
     expect(state.commitments.size()).toBe(0n);
     expect(state.revealed_bids.size()).toBe(0n);
   });
 
-  it('starts an auction once with a public reserve', () => {
-    const { contract, context } = newContract();
-    const result = contract.circuits.start_auction(context, 5n, ownerSecret);
-
-    expect(ledger(result.context.currentQueryContext.state).phase).toBe(1);
-    expect(ledger(result.context.currentQueryContext.state).reserve_price).toBe(5n);
-    expect(() => contract.circuits.start_auction(result.context, 9n, ownerSecret)).toThrow();
-    expect(() => contract.circuits.start_auction(context, 0n, ownerSecret)).toThrow();
+  it('rejects an invalid reserve during deployment', () => {
+    const contract = new Contract({});
+    expect(() => contract.initialState(createConstructorContext({}, proverKeys.coinPublicKey), 0n, ownerSecret)).toThrow();
   });
 
   it('accepts opaque bid commitments without recording bid amounts', () => {
     const { contract, context } = newContract();
-    const started = contract.circuits.start_auction(context, 5n, ownerSecret);
     const commitment = pureCircuits.bid_commitment(42n, saltA);
-    const committed = contract.circuits.commit_bid(started.context, commitment);
+    const committed = contract.circuits.commit_bid(context, commitment);
     const state = ledger(committed.context.currentQueryContext.state);
 
     expect(state.commitments.member(commitment)).toBe(true);
@@ -60,9 +54,8 @@ describe('ProofShield sealed-bid auction circuits', () => {
 
   it('rejects duplicate commitments and commitments outside the commit phase', () => {
     const { contract, context } = newContract();
-    const started = contract.circuits.start_auction(context, 5n, ownerSecret);
     const commitment = pureCircuits.bid_commitment(42n, saltA);
-    const committed = contract.circuits.commit_bid(started.context, commitment);
+    const committed = contract.circuits.commit_bid(context, commitment);
 
     expect(() => contract.circuits.commit_bid(committed.context, commitment)).toThrow();
     const closed = contract.circuits.close_bidding(committed.context, ownerSecret);
@@ -73,9 +66,8 @@ describe('ProofShield sealed-bid auction circuits', () => {
 
   it('accepts a matching reveal and updates the public winner only after reveal', () => {
     const { contract, context } = newContract();
-    const started = contract.circuits.start_auction(context, 5n, ownerSecret);
     const commitment = pureCircuits.bid_commitment(42n, saltA);
-    const committed = contract.circuits.commit_bid(started.context, commitment);
+    const committed = contract.circuits.commit_bid(context, commitment);
     const closed = contract.circuits.close_bidding(committed.context, ownerSecret);
 
     expect(ledger(closed.context.currentQueryContext.state).highest_bid).toBe(0n);
@@ -89,9 +81,8 @@ describe('ProofShield sealed-bid auction circuits', () => {
 
   it('rejects a bid or salt that does not match its commitment', () => {
     const { contract, context } = newContract();
-    const started = contract.circuits.start_auction(context, 5n, ownerSecret);
     const commitment = pureCircuits.bid_commitment(42n, saltA);
-    const committed = contract.circuits.commit_bid(started.context, commitment);
+    const committed = contract.circuits.commit_bid(context, commitment);
     const closed = contract.circuits.close_bidding(committed.context, ownerSecret);
 
     expect(() => contract.circuits.reveal_bid(closed.context, 41n, saltA)).toThrow();
@@ -99,11 +90,10 @@ describe('ProofShield sealed-bid auction circuits', () => {
   });
 
   it('rejects repeated reveal and only selects bids meeting reserve', () => {
-    const { contract, context } = newContract();
-    const started = contract.circuits.start_auction(context, 10n, ownerSecret);
+    const { contract, context } = newContract(10n);
     const lowBid = pureCircuits.bid_commitment(7n, saltA);
     const highBid = pureCircuits.bid_commitment(15n, saltB);
-    const lowCommitted = contract.circuits.commit_bid(started.context, lowBid);
+    const lowCommitted = contract.circuits.commit_bid(context, lowBid);
     const highCommitted = contract.circuits.commit_bid(lowCommitted.context, highBid);
     const closed = contract.circuits.close_bidding(highCommitted.context, ownerSecret);
     const belowReserve = contract.circuits.reveal_bid(closed.context, 7n, saltA);

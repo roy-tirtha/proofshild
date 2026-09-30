@@ -45,7 +45,7 @@ async function loadPrivateOwnerSecret(address, password) {
 }
 
 function pendingAuctionKey() {
-  return `proofshield:pending-auction:${walletAddress.toLowerCase()}`;
+  return `proofshield:pending-auction:v2:${walletAddress.toLowerCase()}`;
 }
 
 window.addEventListener('proofshield:wallet-connected', (event) => {
@@ -66,7 +66,6 @@ button.addEventListener('click', async () => {
   button.disabled = true;
   let deployedAddress;
   let deploymentTransactionId;
-  let startTransactionId;
   try {
     await sessionUser();
     const pending = JSON.parse(localStorage.getItem(pendingAuctionKey()) || 'null');
@@ -76,7 +75,6 @@ button.addEventListener('click', async () => {
     if (!/^[1-9]\d*$/.test(reserve) || BigInt(reserve) > 18446744073709551615n) throw new Error('Enter a positive whole-number reserve.');
     const client = await import('./proof-client.js');
     deploymentTransactionId = pending?.deploymentTransactionId;
-    startTransactionId = pending?.startTransactionId;
     const password = await client.getAuctionPrivateStatePassword(walletApi);
     setStatus(pending ? 'Resuming the pending auction in this wallet window…' : 'Preparing the wallet transaction session…');
     const session = await client.createAuctionSession(walletApi, password);
@@ -86,12 +84,12 @@ button.addEventListener('click', async () => {
       if (deployedAddress) {
         secret = await loadPrivateOwnerSecret(deployedAddress, password);
       } else {
-        setStatus('Deploying a new auction contract. Approve the deployment in your connected wallet…');
-        const deployment = await client.deployAuctionWithProviders(session.providers);
+        secret = crypto.getRandomValues(new Uint8Array(32));
+        setStatus('Deploying and opening the auction. Approve the single transaction in your connected wallet…');
+        const deployment = await client.deployAuctionWithProviders(session.providers, BigInt(reserve), secret);
         deployedAddress = deployment.contractAddress;
         deploymentTransactionId = deployment.transactionId;
         localStorage.setItem('proofshield:auction-contract-address', deployedAddress);
-        secret = crypto.getRandomValues(new Uint8Array(32));
         await savePrivateOwnerRecord(deployedAddress, password, secret);
         localStorage.setItem(pendingAuctionKey(), JSON.stringify({
           contractAddress: deployedAddress,
@@ -100,33 +98,14 @@ button.addEventListener('click', async () => {
           deploymentTransactionId,
         }));
       }
-      const state = pending ? await client.readAuctionState(session.providers, deployedAddress) : null;
-      if (!state || Number(state.phase) === 0) {
-        await client.waitForWalletTransactions(walletApi, (count) => {
-          setStatus(`Waiting for ${count} earlier wallet transaction${count === 1 ? '' : 's'} to confirm before starting bidding…`);
-        });
-        setStatus('Starting bidding on the new contract. Approve the transaction in the same wallet window…');
-        const startResult = await client.submitAuctionCircuit(
-          session.providers,
-          deployedAddress,
-          'start_auction',
-          [BigInt(reserve), secret],
-          walletApi,
-          setStatus,
-        );
-        startTransactionId = client.transactionReference(startResult);
-        localStorage.setItem(pendingAuctionKey(), JSON.stringify({
-          contractAddress: deployedAddress,
-          title,
-          reserve,
-          deploymentTransactionId,
-          startTransactionId,
-        }));
+      const state = await client.readAuctionState(session.providers, deployedAddress);
+      if (Number(state.phase) !== 1) {
+        throw new Error('The deployed contract did not enter its bidding phase. Wait for the wallet transaction to settle, then retry this same saved auction.');
       }
     } finally {
       await session.dispose().catch(() => {});
     }
-    setStatus('Auction started. Publishing it to the shared catalogue…');
+    setStatus('Auction is open for bidding. Publishing it to the shared catalogue…');
     const response = await fetch('/api/auctions', {
       method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ contractAddress: deployedAddress, title, creatorWallet: walletAddress }),
@@ -135,9 +114,6 @@ button.addEventListener('click', async () => {
     if (!response.ok) throw new Error(body.error || 'The auction is live but could not be added to the catalogue.');
     if (deploymentTransactionId) {
       await client.recordAuctionActivity({ contractAddress: deployedAddress, action: 'auction_deployed', transactionId: deploymentTransactionId, walletAddress });
-    }
-    if (startTransactionId) {
-      await client.recordAuctionActivity({ contractAddress: deployedAddress, action: 'bidding_started', transactionId: startTransactionId, walletAddress });
     }
     localStorage.removeItem(pendingAuctionKey());
     window.location.assign(`auction.html?contract=${encodeURIComponent(deployedAddress)}&title=${encodeURIComponent(title)}`);

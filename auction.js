@@ -5,11 +5,10 @@ let transactionPending = false;
 let privateRecords;
 let privateStatePassword;
 
-const defaultContractAddress = '7dce7dd497e7cfdd82a2176f04678106c13db9e9d05315590f58af383daf4eca';
 const query = new URLSearchParams(window.location.search);
 const hasSelectedContract = Boolean(query.get('contract'));
-let contractAddress = (query.get('contract') || import.meta.env.VITE_CONTRACT_ADDRESS?.trim() || localStorage.getItem('proofshield:auction-contract-address') || defaultContractAddress).toLowerCase();
-if (!/^[0-9a-f]{64}$/i.test(contractAddress)) contractAddress = defaultContractAddress;
+let contractAddress = (query.get('contract') || import.meta.env.VITE_CONTRACT_ADDRESS?.trim() || localStorage.getItem('proofshield:auction-contract-address') || '').toLowerCase();
+if (!/^[0-9a-f]{64}$/i.test(contractAddress)) contractAddress = '';
 const view = document.body.dataset.auctionView || 'bid';
 const byId = (id) => document.getElementById(id);
 const phases = ['Not started', 'Bidding open', 'Reveal open', 'Finished'];

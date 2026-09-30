@@ -47,32 +47,6 @@
       }
     },
     {
-      "name": "start_auction",
-      "pure": false,
-      "proof": true,
-      "arguments": [
-        {
-          "name": "reserve",
-          "type": {
-            "type-name": "Uint",
-            "maxval": 18446744073709551615
-          }
-        },
-        {
-          "name": "owner_secret",
-          "type": {
-            "type-name": "Bytes",
-            "length": 32
-          }
-        }
-      ],
-      "result-type": {
-        "type-name": "Tuple",
-        "types": [
-        ]
-      }
-    },
-    {
       "name": "commit_bid",
       "pure": false,
       "proof": true,

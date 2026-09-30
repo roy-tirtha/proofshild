@@ -4,9 +4,6 @@ export type Witnesses<PS> = {
 }
 
 export type ImpureCircuits<PS> = {
-  start_auction(context: __compactRuntime.CircuitContext<PS>,
-                reserve_0: bigint,
-                owner_secret_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   commit_bid(context: __compactRuntime.CircuitContext<PS>,
              commitment_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   close_bidding(context: __compactRuntime.CircuitContext<PS>,
@@ -19,9 +16,6 @@ export type ImpureCircuits<PS> = {
 }
 
 export type ProvableCircuits<PS> = {
-  start_auction(context: __compactRuntime.CircuitContext<PS>,
-                reserve_0: bigint,
-                owner_secret_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   commit_bid(context: __compactRuntime.CircuitContext<PS>,
              commitment_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   close_bidding(context: __compactRuntime.CircuitContext<PS>,
@@ -44,9 +38,6 @@ export type Circuits<PS> = {
                  salt_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
   owner_commitment(context: __compactRuntime.CircuitContext<PS>,
                    secret_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
-  start_auction(context: __compactRuntime.CircuitContext<PS>,
-                reserve_0: bigint,
-                owner_secret_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   commit_bid(context: __compactRuntime.CircuitContext<PS>,
              commitment_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   close_bidding(context: __compactRuntime.CircuitContext<PS>,
@@ -91,7 +82,9 @@ export declare class Contract<PS = any, W extends Witnesses<PS> = Witnesses<PS>>
   impureCircuits: ImpureCircuits<PS>;
   provableCircuits: ProvableCircuits<PS>;
   constructor(witnesses: W);
-  initialState(context: __compactRuntime.ConstructorContext<PS>): __compactRuntime.ConstructorResult<PS>;
+  initialState(context: __compactRuntime.ConstructorContext<PS>,
+               reserve_0: bigint,
+               owner_secret_0: Uint8Array): __compactRuntime.ConstructorResult<PS>;
 }
 
 export declare function ledger(state: __compactRuntime.StateValue | __compactRuntime.ChargedState): Ledger;
