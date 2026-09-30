@@ -56,7 +56,7 @@ export async function waitForWalletTransactions(api, onWaiting = () => {}) {
   const deadline = Date.now() + 180_000;
   while (Date.now() < deadline) {
     const history = await api.getTxHistory(0, 20);
-    const pending = history.filter(({ txStatus }) => txStatus.status === 'pending' || txStatus.status === 'confirmed');
+    const pending = history.filter(({ txStatus }) => String(txStatus?.status ?? '').toLowerCase() === 'pending');
     if (pending.length === 0) return;
     onWaiting(pending.length);
     await new Promise((resolve) => window.setTimeout(resolve, 3000));
