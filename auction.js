@@ -146,6 +146,7 @@ async function showAuctionChooser() {
   const chooser = document.createElement('section');
   chooser.className = 'auction-panel result-card';
   chooser.innerHTML = '<h2>Select an auction</h2><p>Choose an auction from the shared Midnight contract.</p>';
+  if (payload.configurationRequired) chooser.querySelector('p').textContent = 'The shared auction contract is being configured. Check back soon.';
   for (const item of payload.auctions || []) {
     const link = document.createElement('a');
     link.className = 'auction-button result-link';

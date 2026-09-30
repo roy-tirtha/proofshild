@@ -9,7 +9,8 @@ export async function handleAuctions(request, response) {
   try {
     const collection = getDb().collection('auctions');
     if (request.method === 'GET') {
-      const auctions = await collection.find({}, { projection: { _id: 0, auctionId: 1, contractAddress: 1, title: 1, creatorWallet: 1, createdAt: 1, network: 1 } }).sort({ createdAt: -1 }).limit(100).toArray();
+      if (!validAuctionId(CONTRACT_ADDRESS)) return respond(response, 200, { contractAddress: null, auctions: [], configurationRequired: true });
+      const auctions = await collection.find({ contractAddress: CONTRACT_ADDRESS.toLowerCase(), auctionId: { $type: 'string' } }, { projection: { _id: 0, auctionId: 1, contractAddress: 1, title: 1, creatorWallet: 1, createdAt: 1, network: 1 } }).sort({ createdAt: -1 }).limit(100).toArray();
       return respond(response, 200, { contractAddress: CONTRACT_ADDRESS, auctions });
     }
     if (request.method !== 'POST') return respond(response, 405, { error: 'Method not allowed.' });

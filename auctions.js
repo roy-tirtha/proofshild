@@ -29,7 +29,7 @@ async function loadCatalogue() {
     const response = await fetch('/api/auctions', { credentials: 'include' });
     const payload = await readApiJson(response);
     if (!response.ok) throw new Error(payload.error || 'Could not load the auction catalogue.');
-    if (!payload.auctions.length) { status.textContent = 'No auctions are registered yet. Create the first auction in the shared contract.'; return; }
+    if (!payload.auctions.length) { status.textContent = payload.configurationRequired ? 'The shared auction contract is being configured. Check back soon.' : 'No auctions are registered yet. Create the first auction in the shared contract.'; return; }
     const { readPreprodAuction } = await import('./proof-client.js');
     const cards = await Promise.all(payload.auctions.map(async (auction) => {
       try { return cardFor(auction, await readPreprodAuction(auction.auctionId)); }
