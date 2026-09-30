@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let connectedApi;
   let connectedName;
   let connectedAddress;
+  const providerStorageKey = 'proofshield:wallet-provider';
 
   window.proofshieldWallet = {
     getConnectedWallet: () => connectedApi,
@@ -38,6 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const disconnect = () => {
+    sessionStorage.removeItem(providerStorageKey);
+    window.proofshieldWalletMetadata = undefined;
     window.dispatchEvent(new CustomEvent('proofshield:wallet-disconnected'));
     connectedApi = undefined;
     connectedName = undefined;
@@ -111,25 +114,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.head.append(style);
   }
 
-  buttons.forEach((button) => button.addEventListener('click', async () => {
-    if (connectedApi) {
-      disconnect();
-      return;
-    }
-
-    button.disabled = true;
-    button.textContent = 'Connecting…';
+  const connectWallet = async ([walletId, wallet]) => {
+    buttons.forEach((button) => {
+      button.disabled = true;
+      button.textContent = 'Connecting…';
+    });
     try {
-      const wallets = Object.entries(window.midnight ?? {});
-      if (!wallets.length) {
-        throw new Error('No Midnight wallet detected. Install Lace or 1AM, then refresh.');
-      }
-      const selectedWallet = await chooseWallet(wallets);
-      if (!selectedWallet) {
-        updateButtons('Wallet connection cancelled.');
-        return;
-      }
-      const [walletId, wallet] = selectedWallet;
       const api = await wallet.connect('preprod');
       const walletName = wallet.name || (/1am/i.test(walletId) ? '1AM Wallet' : 'Midnight Wallet');
       const walletRdns = wallet.rdns ?? walletId;
@@ -163,6 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
       connectedName = walletName;
       connectedAddress = unshieldedAddress;
       window.proofshieldWalletMetadata = { walletName, walletRdns };
+      sessionStorage.setItem(providerStorageKey, walletRdns);
       window.dispatchEvent(new CustomEvent('proofshield:wallet-connected', {
         detail: { api, address: unshieldedAddress, name: walletName, rdns: walletRdns, network: 'preprod' },
       }));
@@ -175,5 +166,35 @@ document.addEventListener('DOMContentLoaded', () => {
       buttons.forEach((item) => { item.disabled = false; });
       if (!connectedApi) buttons.forEach((item) => { item.textContent = 'Connect wallet'; });
     }
+  };
+
+  buttons.forEach((button) => button.addEventListener('click', async () => {
+    if (connectedApi) {
+      disconnect();
+      return;
+    }
+    const wallets = Object.entries(window.midnight ?? {});
+    if (!wallets.length) {
+      updateButtons('No Midnight wallet detected. Install Lace or 1AM, then refresh.');
+      return;
+    }
+    const selectedWallet = await chooseWallet(wallets);
+    if (!selectedWallet) {
+      updateButtons('Wallet connection cancelled.');
+      return;
+    }
+    await connectWallet(selectedWallet);
   }));
+
+  const restoreWallet = async () => {
+    const savedProvider = sessionStorage.getItem(providerStorageKey);
+    if (!savedProvider) return;
+    const wallets = Object.entries(window.midnight ?? {});
+    const selectedWallet = wallets.find(([walletId, wallet]) => walletId === savedProvider || wallet.rdns === savedProvider);
+    if (selectedWallet) await connectWallet(selectedWallet);
+  };
+
+  restoreWallet().catch((error) => {
+    console.warn('[ProofShield] Could not restore the wallet connection:', error);
+  });
 });
