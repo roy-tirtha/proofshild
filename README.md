@@ -62,14 +62,14 @@ This deploy happens once. It needs a funded developer Preprod wallet; regular au
 1. Copy .env.preprod.example to ignored .env.preprod.
 2. Set exactly one of MIDNIGHT_PREPROD_MNEMONIC or MIDNIGHT_PREPROD_SEED. Never expose either secret in Git, Vercel, or the frontend.
 3. Fund that wallet with Preprod NIGHT and registered DUST.
-4. For a wallet-based deployment, run the app, connect the funded Lace or 1AM wallet, and call `await window.proofshieldDeployAuction()` in the browser console. It deploys the singleton once and prints the address. For a terminal deployment, run:
+4. The shared contract is deployed to Preprod at `b0bd1feb64dadad51e987f6ba8e08adaa26945b3135b44c014c8f08a56bbae89`. For future deployments, connect a funded Lace or 1AM wallet and call `await window.proofshieldDeployAuction()` in the browser console, or use the terminal method:
 
 ~~~bash
 yarn deploy
 ~~~
 
-5. Copy contractAddress from deployment.json and replace REPLACE_WITH_SINGLETON_PREPROD_ADDRESS in contract-address.js.
-6. Run yarn build, deploy the repository to Vercel, and verify the address is visible on the auction pages.
+5. The current address is configured in `contract-address.js`, which is the single source of truth for frontend and API actions.
+6. Deploy the repository to Vercel and verify the address is visible on the auction pages.
 
 The old per-auction deployment addresses are not compatible with this multi-auction contract. Deploy this version once and use only its emitted address.
 
