@@ -22,7 +22,7 @@
     <button class="mobile-burger" aria-label="Toggle Menu" aria-expanded="false"><span class="burger-bar"></span><span class="burger-bar"></span><span class="burger-bar"></span></button>
   </header>
   <div class="mobile-overlay"></div><nav class="mobile-sheet" aria-label="Mobile Navigation"><a href="index.html" class="mobile-nav-link">Home</a><a href="create-auction.html" class="mobile-nav-link active">Auctions</a><a href="auction.html" class="mobile-nav-link">Place bid</a><a href="auction-results.html" class="mobile-nav-link">Declare winner</a><a href="auth.html" class="mobile-sign-in">Sign in</a><button class="mobile-wallet-connect" type="button" data-wallet-connect>Connect wallet</button></nav>
-  <main class="create-card"><span class="create-kicker">One contract per auction · Preprod</span><h1>Create an auction</h1><p>Creating deploys a new Midnight contract already configured for bidding, then publishes it to the shared auction list. Approve one transaction in your connected wallet.</p>
+  <main class="create-card"><span class="create-kicker">Shared contract · Preprod</span><h1>Create an auction</h1><p>Creating opens a new auction ID inside the one deployed Midnight contract, then publishes its public listing to the shared catalogue. Approve one transaction in your connected wallet.</p>
     <label class="create-control"><span>Auction title</span><input id="create-title" type="text" maxlength="100" placeholder="e.g. Community grant round" required /></label>
     <label class="create-control"><span>Minimum qualifying bid (reserve)</span><input id="create-reserve" type="number" min="1" step="1" value="1" required /></label>
     <button id="create-auction-button" class="create-button" type="button" disabled>Create and publish auction</button>

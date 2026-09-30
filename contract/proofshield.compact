@@ -4,14 +4,15 @@ import CompactStandardLibrary;
 
 enum AuctionPhase { UNINITIALIZED, COMMIT, REVEAL, FINALIZED }
 
-export ledger phase: AuctionPhase;
-export ledger reserve_price: Uint<64>;
-export ledger auction_owner_commitment: Bytes<32>;
-export ledger commitments: Map<Bytes<32>, Boolean>;
+export ledger phases: Map<Bytes<32>, AuctionPhase>;
+export ledger reserve_prices: Map<Bytes<32>, Uint<64>>;
+export ledger auction_owner_commitments: Map<Bytes<32>, Bytes<32>>;
+export ledger bid_commitments: Map<Bytes<32>, Boolean>;
 export ledger revealed_bids: Map<Bytes<32>, Uint<64>>;
-export ledger highest_bid: Uint<64>;
-export ledger winning_commitment: Bytes<32>;
-export ledger reveal_count: Counter;
+export ledger highest_bids: Map<Bytes<32>, Uint<64>>;
+export ledger winning_commitments: Map<Bytes<32>, Bytes<32>>;
+export ledger commit_counts: Map<Bytes<32>, Uint<64>>;
+export ledger reveal_counts: Map<Bytes<32>, Uint<64>>;
 
 export pure circuit bid_commitment(amount: Uint<64>, salt: Bytes<32>): Bytes<32> {
   return persistentHash<Vector<3, Bytes<32>>>([
@@ -28,44 +29,67 @@ export pure circuit owner_commitment(secret: Bytes<32>): Bytes<32> {
   ]);
 }
 
-constructor(reserve: Uint<64>, owner_secret: Bytes<32>) {
+export pure circuit auction_bid_key(auction_id: Bytes<32>, commitment: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([
+    pad(32, "proofshield:auction:entry:v1"),
+    auction_id,
+    commitment,
+  ]);
+}
+
+constructor() {}
+
+export circuit create_auction(auction_id: Bytes<32>, reserve: Uint<64>, owner_secret: Bytes<32>): [] {
   assert(reserve > 0, "reserve price must be positive");
-  reserve_price = disclose(reserve);
-  auction_owner_commitment = disclose(owner_commitment(owner_secret));
-  highest_bid = disclose(0);
-  phase = disclose(AuctionPhase.COMMIT);
+  assert(!phases.member(disclose(auction_id)), "auction ID already exists");
+  phases.insert(disclose(auction_id), disclose(AuctionPhase.COMMIT));
+  reserve_prices.insert(disclose(auction_id), disclose(reserve));
+  auction_owner_commitments.insert(disclose(auction_id), disclose(owner_commitment(owner_secret)));
+  highest_bids.insert(disclose(auction_id), disclose(0));
+  commit_counts.insert(disclose(auction_id), disclose(0));
+  reveal_counts.insert(disclose(auction_id), disclose(0));
 }
 
-export circuit commit_bid(commitment: Bytes<32>): [] {
-  assert(phase == AuctionPhase.COMMIT, "auction is not accepting commitments");
-  assert(!commitments.member(disclose(commitment)), "commitment already submitted");
-  commitments.insert(disclose(commitment), disclose(false));
+export circuit commit_bid(auction_id: Bytes<32>, commitment: Bytes<32>): [] {
+  assert(phases.member(disclose(auction_id)), "auction does not exist");
+  assert(phases.lookup(disclose(auction_id)) == AuctionPhase.COMMIT, "auction is not accepting commitments");
+  const key = disclose(auction_bid_key(auction_id, commitment));
+  assert(!bid_commitments.member(key), "commitment already submitted");
+  bid_commitments.insert(key, disclose(false));
+  const count = commit_counts.lookup(disclose(auction_id));
+  commit_counts.insert(disclose(auction_id), disclose((count + 1) as Uint<64>));
 }
 
-export circuit close_bidding(owner_secret: Bytes<32>): [] {
-  assert(phase == AuctionPhase.COMMIT, "bidding is not open");
-  assert(owner_commitment(owner_secret) == auction_owner_commitment, "only the auction creator may close bidding");
-  phase = disclose(AuctionPhase.REVEAL);
+export circuit close_bidding(auction_id: Bytes<32>, owner_secret: Bytes<32>): [] {
+  assert(phases.member(disclose(auction_id)), "auction does not exist");
+  assert(phases.lookup(disclose(auction_id)) == AuctionPhase.COMMIT, "bidding is not open");
+  assert(owner_commitment(owner_secret) == auction_owner_commitments.lookup(disclose(auction_id)), "only the auction creator may close bidding");
+  phases.insert(disclose(auction_id), disclose(AuctionPhase.REVEAL));
 }
 
-export circuit reveal_bid(amount: Uint<64>, salt: Bytes<32>): [] {
-  assert(phase == AuctionPhase.REVEAL, "auction is not in reveal phase");
+export circuit reveal_bid(auction_id: Bytes<32>, amount: Uint<64>, salt: Bytes<32>): [] {
+  assert(phases.member(disclose(auction_id)), "auction does not exist");
+  assert(phases.lookup(disclose(auction_id)) == AuctionPhase.REVEAL, "auction is not in reveal phase");
   const commitment = disclose(bid_commitment(amount, salt));
-  assert(commitments.member(commitment), "no matching bid commitment");
-  assert(!commitments.lookup(commitment), "bid has already been revealed");
-  commitments.insert(disclose(commitment), disclose(true));
-  revealed_bids.insert(disclose(commitment), disclose(amount));
-  reveal_count.increment(1);
-  const meetsReserve = disclose(amount >= reserve_price);
-  const beatsHighest = disclose(amount > highest_bid);
+  const key = disclose(auction_bid_key(auction_id, commitment));
+  assert(bid_commitments.member(key), "no matching bid commitment");
+  assert(!bid_commitments.lookup(key), "bid has already been revealed");
+  bid_commitments.insert(key, disclose(true));
+  revealed_bids.insert(key, disclose(amount));
+  const count = reveal_counts.lookup(disclose(auction_id));
+  reveal_counts.insert(disclose(auction_id), disclose((count + 1) as Uint<64>));
+  const meetsReserve = disclose(amount >= reserve_prices.lookup(disclose(auction_id)));
+  const currentHighest = highest_bids.lookup(disclose(auction_id));
+  const beatsHighest = disclose(amount > currentHighest);
   if (meetsReserve && beatsHighest) {
-    highest_bid = disclose(amount);
-    winning_commitment = disclose(commitment);
+    highest_bids.insert(disclose(auction_id), disclose(amount));
+    winning_commitments.insert(disclose(auction_id), commitment);
   }
 }
 
-export circuit finalize_auction(owner_secret: Bytes<32>): [] {
-  assert(phase == AuctionPhase.REVEAL, "auction is not in reveal phase");
-  assert(owner_commitment(owner_secret) == auction_owner_commitment, "only the auction creator may finalize");
-  phase = disclose(AuctionPhase.FINALIZED);
+export circuit finalize_auction(auction_id: Bytes<32>, owner_secret: Bytes<32>): [] {
+  assert(phases.member(disclose(auction_id)), "auction does not exist");
+  assert(phases.lookup(disclose(auction_id)) == AuctionPhase.REVEAL, "auction is not in reveal phase");
+  assert(owner_commitment(owner_secret) == auction_owner_commitments.lookup(disclose(auction_id)), "only the auction creator may finalize");
+  phases.insert(disclose(auction_id), disclose(AuctionPhase.FINALIZED));
 }

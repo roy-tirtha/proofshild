@@ -1,47 +1,30 @@
 import { auth } from './auth.js';
 import { getDb } from './db.js';
+import { CONTRACT_ADDRESS } from '../contract-address.js';
 
-function respond(response, status, body) {
-  return response.status(status).json(body);
-}
+function respond(response, status, body) { return response.status(status).json(body); }
+function validAuctionId(value) { return typeof value === 'string' && /^[0-9a-f]{64}$/i.test(value); }
 
 export async function handleAuctions(request, response) {
   try {
     const collection = getDb().collection('auctions');
     if (request.method === 'GET') {
-      const auctions = await collection.find({}, {
-        projection: { _id: 0, contractAddress: 1, title: 1, creatorWallet: 1, createdAt: 1, network: 1 },
-      }).sort({ createdAt: -1 }).limit(100).toArray();
-      return respond(response, 200, { auctions });
+      const auctions = await collection.find({}, { projection: { _id: 0, auctionId: 1, contractAddress: 1, title: 1, creatorWallet: 1, createdAt: 1, network: 1 } }).sort({ createdAt: -1 }).limit(100).toArray();
+      return respond(response, 200, { contractAddress: CONTRACT_ADDRESS, auctions });
     }
     if (request.method !== 'POST') return respond(response, 405, { error: 'Method not allowed.' });
-
+    if (!validAuctionId(CONTRACT_ADDRESS)) return respond(response, 503, { error: 'The shared Midnight contract is not configured.' });
     const user = await auth.api.getSession({ headers: request.headers }).then((session) => session?.user);
     if (!user) return respond(response, 401, { error: 'Sign in before publishing an auction.' });
-
-    const { contractAddress, title, creatorWallet } = request.body ?? {};
-    if (
-      typeof contractAddress !== 'string' || !/^[0-9a-f]{64}$/i.test(contractAddress) ||
-      typeof title !== 'string' || title.trim().length < 1 || title.trim().length > 100 ||
-      typeof creatorWallet !== 'string' || creatorWallet.trim().length < 1 || creatorWallet.length > 256
-    ) {
-      return respond(response, 400, { error: 'A valid Preprod contract address, title, and connected creator wallet are required.' });
+    const { auctionId, title, creatorWallet, transactionId } = request.body ?? {};
+    if (!validAuctionId(auctionId) || typeof title !== 'string' || title.trim().length < 1 || title.trim().length > 100 || typeof creatorWallet !== 'string' || creatorWallet.trim().length < 1 || creatorWallet.length > 256 || typeof transactionId !== 'string' || transactionId.length < 1 || transactionId.length > 256) {
+      return respond(response, 400, { error: 'Auction ID, title, creator wallet, and creation transaction are required.' });
     }
-
-    const existing = await collection.findOne({ contractAddress });
-    if (existing && existing.creatorUserId !== user.id) {
-      return respond(response, 409, { error: 'This contract is already listed by another account.' });
-    }
-    const auction = {
-      contractAddress,
-      title: title.trim(),
-      creatorWallet: creatorWallet.trim(),
-      creatorUserId: user.id,
-      network: 'preprod',
-      createdAt: existing?.createdAt ?? new Date(),
-    };
-    await collection.replaceOne({ contractAddress }, auction, { upsert: true });
-    return respond(response, 201, { auction: { contractAddress, title: auction.title, creatorWallet: auction.creatorWallet, createdAt: auction.createdAt, network: auction.network } });
+    const existing = await collection.findOne({ auctionId: auctionId.toLowerCase() });
+    if (existing && existing.creatorUserId !== user.id) return respond(response, 409, { error: 'This auction ID is already listed by another account.' });
+    const auction = { auctionId: auctionId.toLowerCase(), contractAddress: CONTRACT_ADDRESS.toLowerCase(), title: title.trim(), creatorWallet: creatorWallet.trim(), creatorUserId: user.id, createTransactionId: transactionId, network: 'preprod', createdAt: existing?.createdAt ?? new Date() };
+    await collection.replaceOne({ auctionId: auction.auctionId }, auction, { upsert: true });
+    return respond(response, 201, { auction: { auctionId: auction.auctionId, contractAddress: auction.contractAddress, title: auction.title, creatorWallet: auction.creatorWallet, createdAt: auction.createdAt, network: auction.network } });
   } catch (error) {
     console.error('[Auctions] Catalogue operation failed:', error?.message);
     return respond(response, 500, { error: 'Auction catalogue is currently unavailable.' });

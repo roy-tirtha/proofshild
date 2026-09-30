@@ -17,6 +17,7 @@ globalThis.WebSocket = WebSocket;
 const LOCAL_SEED = '0000000000000000000000000000000000000000000000000000000000000001';
 const PRIVATE_STATE_ID = 'AlicePrivateProofShieldAuctionState';
 const OWNER_SECRET = new Uint8Array(32).fill(9);
+const AUCTION_ID = new Uint8Array(32).fill(1);
 const BID_SALT = new Uint8Array(32).fill(7);
 const BID_AMOUNT = 12n;
 const logger = pino({ level: process.env['LOG_LEVEL'] ?? 'info' });
@@ -69,19 +70,23 @@ describe(`ProofShield sealed auction (${network})`, () => {
   it('deploys, commits privately, reveals, and finalizes the auction', async () => {
     const deployed: DeployedContract<Contract> = await deployContract<Contract>(providers, {
       compiledContract: CompiledProofShieldContract,
-      privateStateId: PRIVATE_STATE_ID,
-      initialPrivateState: {},
-      args: [5n, OWNER_SECRET],
     });
     contractAddress = deployed.deployTxData.public.contractAddress;
-    expect((await queryLedger()).phase).toBe(1);
+    await submitCallTx<Contract, 'create_auction'>(providers, {
+      compiledContract: CompiledProofShieldContract,
+      contractAddress,
+      privateStateId: PRIVATE_STATE_ID,
+      circuitId: 'create_auction',
+      args: [AUCTION_ID, 5n, OWNER_SECRET],
+    });
+    expect((await queryLedger()).phases.lookup(AUCTION_ID)).toBe(1);
     const commitment = pureCircuits.bid_commitment(BID_AMOUNT, BID_SALT);
     await submitCallTx<Contract, 'commit_bid'>(providers, {
       compiledContract: CompiledProofShieldContract,
       contractAddress,
       privateStateId: PRIVATE_STATE_ID,
       circuitId: 'commit_bid',
-      args: [commitment],
+      args: [AUCTION_ID, commitment],
     });
     expect((await queryLedger()).revealed_bids.size()).toBe(0n);
 
@@ -90,23 +95,23 @@ describe(`ProofShield sealed auction (${network})`, () => {
       contractAddress,
       privateStateId: PRIVATE_STATE_ID,
       circuitId: 'close_bidding',
-      args: [OWNER_SECRET],
+      args: [AUCTION_ID, OWNER_SECRET],
     });
     await submitCallTx<Contract, 'reveal_bid'>(providers, {
       compiledContract: CompiledProofShieldContract,
       contractAddress,
       privateStateId: PRIVATE_STATE_ID,
       circuitId: 'reveal_bid',
-      args: [BID_AMOUNT, BID_SALT],
+      args: [AUCTION_ID, BID_AMOUNT, BID_SALT],
     });
-    expect((await queryLedger()).highest_bid).toBe(BID_AMOUNT);
+    expect((await queryLedger()).highest_bids.lookup(AUCTION_ID)).toBe(BID_AMOUNT);
     await submitCallTx<Contract, 'finalize_auction'>(providers, {
       compiledContract: CompiledProofShieldContract,
       contractAddress,
       privateStateId: PRIVATE_STATE_ID,
       circuitId: 'finalize_auction',
-      args: [OWNER_SECRET],
+      args: [AUCTION_ID, OWNER_SECRET],
     });
-    expect((await queryLedger()).phase).toBe(3);
+    expect((await queryLedger()).phases.lookup(AUCTION_ID)).toBe(3);
   });
 });

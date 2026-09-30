@@ -35,13 +35,6 @@ if (Boolean(mnemonic) === Boolean(seed)) {
 const secret: WalletSecret = mnemonic
   ? { kind: 'mnemonic', value: mnemonic }
   : { kind: 'seed', value: seed! };
-const reserve = BigInt(process.env.AUCTION_RESERVE ?? '1');
-const ownerSecretHex = process.env.AUCTION_OWNER_SECRET?.trim().replace(/^0x/, '');
-if (reserve < 1n || reserve > 18446744073709551615n || !ownerSecretHex || !/^[0-9a-f]{64}$/i.test(ownerSecretHex)) {
-  throw new Error('Set AUCTION_RESERVE to a positive Uint64 and AUCTION_OWNER_SECRET to a 32-byte hexadecimal value in the local deployment environment.');
-}
-const ownerSecret = Uint8Array.from(ownerSecretHex.match(/.{2}/g)!, (byte) => Number.parseInt(byte, 16));
-
 const config = getConfig();
 const env: EnvironmentConfiguration = {
   walletNetworkId: config.networkId,
@@ -63,12 +56,9 @@ try {
   const providers = buildProviders(wallet, path.resolve('contract/managed/proofshield'), config);
   const deployed = await deployContract<Contract>(providers, {
     compiledContract: CompiledProofShieldContract,
-    privateStateId: `ProofShield-${network}`,
-    initialPrivateState: {},
-    args: [reserve, ownerSecret],
   });
   const address = deployed.deployTxData.public.contractAddress;
-  const result = { network, contractAddress: address, phase: 'COMMIT', deployedAt: new Date().toISOString() };
+  const result = { network, contractAddress: address, deployment: 'ProofShield shared multi-auction contract', deployedAt: new Date().toISOString() };
   await writeFile('deployment.json', `${JSON.stringify(result, null, 2)}\n`, { mode: 0o600 });
   logger.info({ ...result, file: 'deployment.json' }, 'Sealed-auction contract deployed');
 } finally {

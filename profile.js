@@ -98,7 +98,7 @@ function renderAuctionHistory(events) {
   list.replaceChildren();
   events.forEach((event) => addHistoryItem(list, {
     title: event.action.replaceAll('_', ' '),
-    detail: `${event.contractAddress.slice(0, 10)}…${event.contractAddress.slice(-8)} · ${formatDate(event.createdAt)}`,
+    detail: `Auction ${event.auctionId?.slice(0, 10) ?? 'unknown'}… · ${formatDate(event.createdAt)}`,
     hash: event.transactionId,
     status: 'Saved to Atlas',
   }));

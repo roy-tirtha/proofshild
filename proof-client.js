@@ -5,8 +5,9 @@ import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-pri
 import { CostModel, Transaction } from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import { CompiledContract } from '@midnight-ntwrk/midnight-js-protocol/compact-js';
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
-import { deployContract, submitCallTx } from '@midnight-ntwrk/midnight-js-contracts';
+import { submitCallTx } from '@midnight-ntwrk/midnight-js-contracts';
 import { Contract, ledger, pureCircuits } from './contract/managed/proofshield/contract/index.js';
+import { requireContractAddress } from './contract-address.js';
 
 const networkId = 'preprod';
 const artifactBase = `${window.location.origin}/contract/managed/proofshield`;
@@ -29,6 +30,23 @@ function fromHex(hex) {
 
 export function createBidCommitment(amount, salt) {
   return pureCircuits.bid_commitment(BigInt(amount), salt);
+}
+
+export function createAuctionId() {
+  return crypto.getRandomValues(new Uint8Array(32));
+}
+
+export function auctionIdToHex(auctionId) {
+  return toHex(auctionId);
+}
+
+export function auctionIdFromHex(auctionId) {
+  if (!/^[0-9a-f]{64}$/i.test(auctionId || '')) throw new Error('Auction ID is malformed.');
+  return fromHex(auctionId);
+}
+
+export function sharedContractAddress() {
+  return requireContractAddress();
 }
 
 const delay = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
@@ -121,6 +139,22 @@ export async function readAuctionState(providers, contractAddress) {
   return ledger(state.data);
 }
 
+export function auctionFromLedger(state, auctionId) {
+  const id = typeof auctionId === 'string' ? auctionIdFromHex(auctionId) : auctionId;
+  if (!state.phases.member(id)) throw new Error('This auction is not present in the shared contract.');
+  const winnerExists = state.winning_commitments.member(id);
+  return {
+    auctionId: auctionIdToHex(id),
+    phase: state.phases.lookup(id),
+    reserve: state.reserve_prices.lookup(id),
+    sealedCount: state.commit_counts.lookup(id),
+    revealedCount: state.reveal_counts.lookup(id),
+    highestBid: state.highest_bids.lookup(id),
+    hasWinner: winnerExists,
+    winningCommitment: winnerExists ? state.winning_commitments.lookup(id) : undefined,
+  };
+}
+
 export async function readPreprodAuctionState(contractAddress) {
   const provider = indexerPublicDataProvider(
     'https://indexer.preprod.midnight.network/api/v4/graphql',
@@ -130,6 +164,11 @@ export async function readPreprodAuctionState(contractAddress) {
   const state = await provider.queryContractState(contractAddress);
   if (!state) throw new Error('No auction contract was found at that address on Preprod.');
   return ledger(state.data);
+}
+
+export async function readPreprodAuction(auctionId) {
+  const state = await readPreprodAuctionState(sharedContractAddress());
+  return auctionFromLedger(state, auctionId);
 }
 
 export async function submitAuctionCircuit(providers, contractAddress, circuitId, args = [], walletApi, onWaiting = () => {}) {
@@ -167,12 +206,12 @@ export function transactionReference(result) {
   return reference;
 }
 
-export async function recordAuctionActivity({ contractAddress, action, transactionId, walletAddress }) {
+export async function recordAuctionActivity({ contractAddress, auctionId, action, transactionId, walletAddress }) {
   const response = await fetch('/api/auction-events', {
     method: 'POST',
     credentials: 'include',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ contractAddress, action, transactionId, walletAddress }),
+    body: JSON.stringify({ contractAddress, auctionId, action, transactionId, walletAddress }),
   });
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('application/json')) {
@@ -181,32 +220,6 @@ export async function recordAuctionActivity({ contractAddress, action, transacti
   const body = await response.json();
   if (!response.ok) throw new Error(body.error || 'Auction activity could not be saved.');
   return body.event;
-}
-
-export async function deployAuctionWithProviders(providers, reserve, ownerSecret) {
-  if (typeof reserve !== 'bigint' || reserve < 1n) throw new Error('A positive reserve is required to deploy an auction.');
-  if (!(ownerSecret instanceof Uint8Array) || ownerSecret.length !== 32) throw new Error('A 32-byte creator secret is required to deploy an auction.');
-  const deployed = await deployContract(providers, {
-    compiledContract,
-    privateStateId,
-    initialPrivateState: {},
-    args: [reserve, ownerSecret],
-  });
-  return {
-    contractAddress: deployed.deployTxData.public.contractAddress,
-    transactionId: transactionReference(deployed.deployTxData.public),
-  };
-}
-
-export async function deployAuctionFromConnectedWallet(api, reserve, ownerSecret) {
-  const password = await getAuctionPrivateStatePassword(api);
-  const session = await createAuctionSession(api, password);
-  try {
-    const deployment = await deployAuctionWithProviders(session.providers, reserve, ownerSecret);
-    return deployment.contractAddress;
-  } finally {
-    await session.dispose().catch(() => {});
-  }
 }
 
 export function bytesToHex(bytes) {

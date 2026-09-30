@@ -2,8 +2,7 @@ import { auth } from './auth.js';
 import { getDb } from './db.js';
 
 const actions = new Set([
-  'auction_deployed',
-  'bidding_started',
+  'auction_created',
   'bid_committed',
   'bidding_closed',
   'bid_revealed',
@@ -26,34 +25,35 @@ export async function handleAuctionEvents(request, response) {
 
     const collection = getDb().collection('auction_events');
     if (request.method === 'GET') {
-      const contractAddress = typeof request.query?.contract === 'string' ? request.query.contract : undefined;
-      const filter = { userId: user.id, ...(contractAddress ? { contractAddress } : {}) };
+      const auctionId = typeof request.query?.auction === 'string' ? request.query.auction : undefined;
+      const filter = { userId: user.id, ...(auctionId ? { auctionId } : {}) };
       const events = await collection.find(filter, {
-        projection: { _id: 0, contractAddress: 1, action: 1, transactionId: 1, walletAddress: 1, network: 1, createdAt: 1 },
+        projection: { _id: 0, contractAddress: 1, auctionId: 1, action: 1, transactionId: 1, walletAddress: 1, network: 1, createdAt: 1 },
       }).sort({ createdAt: -1 }).limit(100).toArray();
       return respond(response, 200, { events });
     }
     if (request.method !== 'POST') return respond(response, 405, { error: 'Method not allowed.' });
 
-    const { contractAddress, action, transactionId, walletAddress } = request.body ?? {};
+    const { contractAddress, auctionId, action, transactionId, walletAddress } = request.body ?? {};
     if (
       typeof contractAddress !== 'string' || !/^[0-9a-f]{64}$/i.test(contractAddress) ||
+      typeof auctionId !== 'string' || !/^[0-9a-f]{64}$/i.test(auctionId) ||
       !actions.has(action) ||
       typeof transactionId !== 'string' || transactionId.length < 1 || transactionId.length > 256 ||
       typeof walletAddress !== 'string' || walletAddress.length < 1 || walletAddress.length > 256
     ) {
-      return respond(response, 400, { error: 'Contract address, action, transaction ID, and connected wallet are required.' });
+      return respond(response, 400, { error: 'Contract address, auction ID, action, transaction ID, and connected wallet are required.' });
     }
 
     const database = getDb();
-    const auction = await database.collection('auctions').findOne({ contractAddress });
+    const auction = await database.collection('auctions').findOne({ auctionId: auctionId.toLowerCase(), contractAddress: contractAddress.toLowerCase() });
     if (!auction) return respond(response, 404, { error: 'Publish the auction before recording its activity.' });
     const wallet = await database.collection('wallet_links').findOne({ userId: user.id, network: 'preprod', walletAddress });
     if (!wallet) return respond(response, 403, { error: 'Connect this wallet while signed in before recording auction activity.' });
 
-    const event = { contractAddress, action, transactionId, walletAddress, userId: user.id, network: 'preprod', createdAt: new Date() };
+    const event = { contractAddress, auctionId: auctionId.toLowerCase(), action, transactionId, walletAddress, userId: user.id, network: 'preprod', createdAt: new Date() };
     await collection.updateOne(
-      { contractAddress, transactionId },
+      { auctionId: event.auctionId, transactionId },
       { $setOnInsert: event },
       { upsert: true },
     );

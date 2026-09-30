@@ -61,12 +61,14 @@ async function ensureApplicationCollections(database) {
       validator: {
         $jsonSchema: {
           bsonType: 'object',
-          required: ['contractAddress', 'title', 'creatorWallet', 'creatorUserId', 'network', 'createdAt'],
+          required: ['auctionId', 'contractAddress', 'title', 'creatorWallet', 'creatorUserId', 'createTransactionId', 'network', 'createdAt'],
           properties: {
+            auctionId: { bsonType: 'string', pattern: '^[0-9a-fA-F]{64}$' },
             contractAddress: { bsonType: 'string', pattern: '^[0-9a-fA-F]{64}$' },
             title: { bsonType: 'string', minLength: 1, maxLength: 100 },
             creatorWallet: { bsonType: 'string', minLength: 1, maxLength: 256 },
             creatorUserId: { bsonType: 'string', minLength: 1 },
+            createTransactionId: { bsonType: 'string', minLength: 1, maxLength: 256 },
             network: { enum: ['preprod'] },
             createdAt: { bsonType: 'date' },
           },
@@ -96,10 +98,11 @@ async function ensureApplicationCollections(database) {
       validator: {
         $jsonSchema: {
           bsonType: 'object',
-          required: ['contractAddress', 'action', 'walletAddress', 'userId', 'network', 'createdAt'],
+          required: ['contractAddress', 'auctionId', 'action', 'walletAddress', 'userId', 'network', 'createdAt'],
           properties: {
             contractAddress: { bsonType: 'string', pattern: '^[0-9a-fA-F]{64}$' },
-            action: { enum: ['auction_deployed', 'bidding_started', 'bid_committed', 'bidding_closed', 'bid_revealed', 'winner_declared'] },
+            auctionId: { bsonType: 'string', pattern: '^[0-9a-fA-F]{64}$' },
+            action: { enum: ['auction_created', 'bid_committed', 'bidding_closed', 'bid_revealed', 'winner_declared'] },
             transactionId: { bsonType: 'string', minLength: 1, maxLength: 256 },
             walletAddress: { bsonType: 'string', minLength: 1, maxLength: 256 },
             userId: { bsonType: 'string', minLength: 1 },
@@ -125,10 +128,16 @@ async function ensureApplicationCollections(database) {
     { unique: true, name: 'unique_network_wallet' },
   );
   await database.collection('wallet_links').createIndex({ userId: 1, network: 1 }, { name: 'wallets_by_user_network' });
-  await database.collection('auctions').createIndex({ contractAddress: 1 }, { unique: true, name: 'unique_auction_contract' });
+  await database.collection('auctions').dropIndex('unique_auction_contract').catch(() => undefined);
+  await database.collection('auctions').dropIndex('unique_auction_id').catch(() => undefined);
+  await database.collection('auctions').createIndex(
+    { auctionId: 1 },
+    { unique: true, partialFilterExpression: { auctionId: { $type: 'string' } }, name: 'unique_auction_id' },
+  );
   await database.collection('auctions').createIndex({ createdAt: -1 }, { name: 'auctions_newest_first' });
+  await database.collection('auction_events').dropIndex('unique_auction_transaction').catch(() => undefined);
   await database.collection('auction_events').createIndex(
-    { contractAddress: 1, transactionId: 1 },
+    { auctionId: 1, transactionId: 1 },
     { unique: true, sparse: true, name: 'unique_auction_transaction' },
   );
   await database.collection('auction_events').createIndex({ userId: 1, createdAt: -1 }, { name: 'auction_events_by_user' });
