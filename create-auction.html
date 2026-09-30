@@ -27,7 +27,7 @@
     <label class="create-control"><span>Minimum qualifying bid (reserve)</span><input id="create-reserve" type="number" min="1" step="1" value="1" required /></label>
     <button id="create-auction-button" class="create-button" type="button" disabled>Create and publish auction</button>
     <p id="create-auction-status" class="create-status" role="status" aria-live="polite">Connect a Lace or 1AM wallet to continue.</p>
-    <p class="create-note">Sign in before publishing. Creator authorization and private bids remain in this browser; clearing browser data will remove access to creator-only actions and unrevealed bids.</p>
+  <p class="create-note">Your signed-in account stores the shared auction entry and public transaction references. Creator authorization and private bids remain in this browser; clearing browser data removes access to creator-only actions and unrevealed bids.</p>
   </main>
   <section class="catalogue" aria-labelledby="current-auctions-title"><span class="catalogue-kicker">Live on Midnight Preprod</span><h2 id="current-auctions-title">Current auctions</h2><p class="catalogue-intro">All published auctions appear here with state read directly from Preprod.</p><p id="catalogue-status" class="catalogue-status" role="status" aria-live="polite">Loading registered auctions…</p><div id="catalogue-list" class="catalogue-list"></div></section>
   <script type="module" src="main.js"></script><script type="module" src="create-auction.js"></script><script type="module" src="auctions.js"></script>
