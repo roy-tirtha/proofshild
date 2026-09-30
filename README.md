@@ -48,13 +48,13 @@ The password in the UI encrypts Midnight's local private state. It does not encr
 
 ## Deploy a Real Preprod Contract
 
-The deployment helper creates a new authentic on-chain auction contract. It cannot run until the repository owner supplies and funds a deployment wallet; do not put wallet secrets into GitHub, Vercel, the browser, or chat.
+The auction page exposes a wallet-backed deployment helper, so you can deploy without `yarn deploy`. It still requires your connected Preprod wallet to approve the deploy transaction and pay its fees. Do not put a wallet seed/mnemonic into the browser console, GitHub, Vercel, or chat.
 
-1. Ensure the Compact CLI is installed: `compact --version`. The workflow pins toolchain `0.31.1` (Compact language `0.23`).
-2. Run `cp .env.preprod.example .env.preprod` and locally set exactly one of `MIDNIGHT_PREPROD_MNEMONIC` or `MIDNIGHT_PREPROD_SEED` in `.env.preprod`.
-3. Fund that wallet for Preprod and register/fund DUST using the network's official faucet.
-4. Run `yarn deploy`. It compiles, deploys, prints the resulting address, and writes `deployment.json` (ignored by Git).
-5. In Vercel → Project → Settings → Environment Variables, set `VITE_CONTRACT_ADDRESS` to the address from `deployment.json`, then redeploy. This is one-time owner configuration; users never deploy or paste addresses.
+1. Fund your Lace or 1AM Preprod wallet with NIGHT and registered DUST.
+2. Open `https://proofshild.vercel.app/auction.html` (or local `http://127.0.0.1:5173/auction.html`) and connect the wallet.
+3. Open browser developer tools → Console and run `await window.proofshieldDeployAuction()`. Choose a 16+ character local private-state password in the prompt and approve the deployment in your wallet.
+4. The authentic address is returned in the console and displayed on the page. It is also saved to this browser's local storage. This does **not** set Vercel's environment for other visitors.
+5. To make the contract default for all visitors, add that address as Vercel `VITE_CONTRACT_ADDRESS` and redeploy. Alternatively, the existing terminal helper is available: copy `.env.preprod.example` to `.env.preprod`, set exactly one of `MIDNIGHT_PREPROD_MNEMONIC` or `MIDNIGHT_PREPROD_SEED` locally, fund it, then run `yarn deploy`; the address is saved to ignored `deployment.json`.
 
 No authentic contract address is committed yet. Deployment is deliberately not part of the Vercel build because deployment requires a funded owner wallet. The address shown by the app is public and verifiable on Preprod.
 
@@ -64,6 +64,6 @@ Vercel builds the frontend and hosts the `api/` serverless functions; a separate
 
 ## CI and Submission Status
 
-GitHub Actions runs Compact compile, Vite build, and the 7 circuit logic tests on pushes and pull requests. The repository history currently exceeds the ten-commit requirement. A passing CI run is needed after changes are pushed.
+GitHub Actions runs Compact compile, Vite build, and the 7 circuit logic tests on pushes and pull requests. The repository history currently exceeds the ten-commit requirement. Confirm the latest workflow run is green after pushing changes.
 
 Still requires owner/organizer actions: deploy the funded Preprod contract and set the Vercel address; submit this proposal for idea approval; capture successful compile and deployed-address screenshots; record the one-minute wallet-to-commit/reveal demo video; and verify a passing GitHub Actions run. These cannot be truthfully completed from this workspace without the deployment wallet, organizer approval, and a live wallet session.

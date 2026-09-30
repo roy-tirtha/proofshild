@@ -9,6 +9,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let connectedName;
   let connectedAddress;
 
+  window.proofshieldWallet = {
+    getConnectedWallet: () => connectedApi,
+  };
+
   const updateButtons = (message) => {
     const connected = Boolean(connectedApi);
     buttons.forEach((button) => {

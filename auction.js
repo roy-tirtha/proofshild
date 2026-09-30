@@ -3,7 +3,7 @@ let connectedAddress;
 let auctionState;
 let transactionPending = false;
 
-const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS?.trim() || '';
+let contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS?.trim() || localStorage.getItem('proofshield:auction-contract-address') || '';
 const byId = (id) => document.getElementById(id);
 
 function setMessage(message) {
@@ -185,6 +185,26 @@ byId('auction-finalize').addEventListener('click', () => runButton('auction-fina
   args: [await readOwnerSecret('auction-owner-receipt-finalize')],
   password: byId('auction-password').value,
 })));
+
+window.proofshieldDeployAuction = async (storagePassword = window.prompt('Choose a private-state password (at least 16 characters).')) => {
+  const api = window.proofshieldWallet?.getConnectedWallet();
+  if (!api) throw new Error('Connect Lace or 1AM from the auction page first.');
+  if (!/^.{16,}$/.test(storagePassword ?? '')) throw new Error('Pass a private-state password of at least 16 characters.');
+  setMessage('Deploying the auction contract. Approve the deployment in your connected wallet…');
+  try {
+    const { deployAuctionFromConnectedWallet } = await import('./proof-client.js');
+    contractAddress = await deployAuctionFromConnectedWallet(api, storagePassword);
+    localStorage.setItem('proofshield:auction-contract-address', contractAddress);
+    byId('auction-contract-address').textContent = contractAddress;
+    updateControls();
+    await refreshState();
+    setMessage(`Auction contract deployed on Preprod: ${contractAddress}`);
+    return contractAddress;
+  } catch (error) {
+    setMessage(error.message || 'Contract deployment failed.');
+    throw error;
+  }
+};
 
 byId('auction-contract-address').textContent = contractAddress || 'Not configured';
 updateControls();

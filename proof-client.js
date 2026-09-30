@@ -4,7 +4,8 @@ import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-p
 import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
 import { CostModel, Transaction } from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import { CompiledContract } from '@midnight-ntwrk/midnight-js-protocol/compact-js';
-import { submitCallTx } from '@midnight-ntwrk/midnight-js-contracts';
+import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
+import { deployContract, submitCallTx } from '@midnight-ntwrk/midnight-js-contracts';
 import { Contract, ledger, pureCircuits } from './contract/managed/proofshield/contract/index.js';
 
 const networkId = 'preprod';
@@ -40,6 +41,7 @@ export async function createAuctionSession(api, storagePassword) {
   if (!config.indexerUri || !config.indexerWsUri) {
     throw new Error('The connected wallet did not provide Preprod indexer endpoints.');
   }
+  setNetworkId(config.networkId);
 
   const zkConfigProvider = new FetchZkConfigProvider(artifactBase, window.fetch.bind(window));
   const publicDataProvider = indexerPublicDataProvider(config.indexerUri, config.indexerWsUri, window.WebSocket);
@@ -102,6 +104,20 @@ export async function submitAuctionCircuit(providers, contractAddress, circuitId
     args,
   });
   return result.public;
+}
+
+export async function deployAuctionFromConnectedWallet(api, storagePassword) {
+  const session = await createAuctionSession(api, storagePassword);
+  try {
+    const deployed = await deployContract(session.providers, {
+      compiledContract,
+      privateStateId,
+      initialPrivateState: {},
+    });
+    return deployed.deployTxData.public.contractAddress;
+  } finally {
+    await session.dispose().catch(() => {});
+  }
 }
 
 export function bytesToHex(bytes) {
