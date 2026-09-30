@@ -131,20 +131,15 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const [walletId, wallet] = selectedWallet;
       const api = await wallet.connect('preprod');
+      const walletName = wallet.name || (/1am/i.test(walletId) ? '1AM Wallet' : 'Midnight Wallet');
+      const walletRdns = wallet.rdns ?? walletId;
       const [{ unshieldedAddress }, connection] = await Promise.all([
         api.getUnshieldedAddress(),
         api.getConnectionStatus(),
       ]);
       if (connection.status !== 'connected') throw new Error('Wallet connection was not established.');
 
-      connectedApi = api;
-      connectedName = wallet.name;
-      connectedAddress = unshieldedAddress;
-      window.dispatchEvent(new CustomEvent('proofshield:wallet-connected', {
-        detail: { api, address: unshieldedAddress, name: wallet.name, network: 'preprod' },
-      }));
-      updateButtons(`${wallet.name} connected on Preprod.`);
-
+      let profileMessage = `${walletName} connected on Preprod.`;
       try {
         const response = await fetch('/api/wallets', {
           method: 'POST',
@@ -153,15 +148,25 @@ document.addEventListener('DOMContentLoaded', () => {
           body: JSON.stringify({
             network: 'preprod',
             walletAddress: unshieldedAddress,
-            walletName: wallet.name,
-            walletRdns: wallet.rdns ?? walletId,
+            walletName,
+            walletRdns,
           }),
         });
-        if (response.ok) updateButtons(`${wallet.name} connected and saved to your profile.`);
-        else if (response.status !== 401) updateButtons(`${wallet.name} connected; profile save failed.`);
+        if (response.ok) profileMessage = `${walletName} connected and saved to your profile.`;
+        else if (response.status === 401) profileMessage = `${walletName} connected. Sign in to save it to your profile.`;
+        else profileMessage = `${walletName} connected; profile save failed. Retry after signing in.`;
       } catch {
-        updateButtons(`${wallet.name} connected; profile service unavailable.`);
+        profileMessage = `${walletName} connected; profile service unavailable. Retry before submitting an auction action.`;
       }
+
+      connectedApi = api;
+      connectedName = walletName;
+      connectedAddress = unshieldedAddress;
+      window.proofshieldWalletMetadata = { walletName, walletRdns };
+      window.dispatchEvent(new CustomEvent('proofshield:wallet-connected', {
+        detail: { api, address: unshieldedAddress, name: walletName, rdns: walletRdns, network: 'preprod' },
+      }));
+      updateButtons(profileMessage);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Wallet connection failed.';
       updateButtons(message);

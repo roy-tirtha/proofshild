@@ -102,6 +102,7 @@ async function submit(circuitId, args, activity) {
   if (!walletApi) throw new Error('Connect a Lace or 1AM wallet first.');
   await requireSignedIn();
   const client = await import('./proof-client.js');
+  await client.ensureWalletLinked(walletAddress);
   const session = await client.createAuctionSession(walletApi, privateStatePassword);
   try {
     await client.waitForWalletTransactions(walletApi, (count) => setMessage('Waiting for ' + count + ' earlier wallet transaction' + (count === 1 ? '' : 's') + ' to finalize…'));

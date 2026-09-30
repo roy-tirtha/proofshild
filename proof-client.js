@@ -223,7 +223,30 @@ export function transactionReference(result) {
   return reference;
 }
 
+export async function ensureWalletLinked(walletAddress) {
+  const metadata = window.proofshieldWalletMetadata || {};
+  const response = await fetch('/api/wallets', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      network: 'preprod',
+      walletAddress,
+      walletName: metadata.walletName || 'Midnight wallet',
+      walletRdns: metadata.walletRdns || 'unknown',
+    }),
+  });
+  const contentType = response.headers.get('content-type') || '';
+  const body = contentType.includes('application/json') ? await response.json() : {};
+  if (!response.ok) {
+    if (response.status === 401) throw new Error('Sign in before connecting your wallet to your profile, then reconnect the wallet.');
+    throw new Error(body.error || 'The connected wallet could not be linked to this account.');
+  }
+  return body.wallet;
+}
+
 export async function recordAuctionActivity({ contractAddress, auctionId, action, transactionId, walletAddress }) {
+  await ensureWalletLinked(walletAddress);
   const response = await fetch('/api/auction-events', {
     method: 'POST',
     credentials: 'include',

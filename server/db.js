@@ -123,9 +123,10 @@ async function ensureApplicationCollections(database) {
     }
   }
 
+  await database.collection('wallet_links').dropIndex('unique_network_wallet').catch(() => undefined);
   await database.collection('wallet_links').createIndex(
-    { network: 1, walletAddress: 1 },
-    { unique: true, name: 'unique_network_wallet' },
+    { userId: 1, network: 1, walletAddress: 1 },
+    { unique: true, name: 'unique_user_network_wallet' },
   );
   await database.collection('wallet_links').createIndex({ userId: 1, network: 1 }, { name: 'wallets_by_user_network' });
   await database.collection('auctions').dropIndex('unique_auction_contract').catch(() => undefined);

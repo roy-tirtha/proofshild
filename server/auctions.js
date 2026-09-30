@@ -25,8 +25,15 @@ export async function handleAuctions(request, response) {
     if (typeof transactionId !== 'string' || transactionId.length < 1 || transactionId.length > 256) invalidFields.push('transactionId must contain 1–256 characters');
     if (invalidFields.length) return respond(response, 400, { error: `Invalid auction entry: ${invalidFields.join('; ')}.` });
     const existing = await collection.findOne({ auctionId: auctionId.toLowerCase() });
-    if (existing && existing.creatorUserId !== user.id) return respond(response, 409, { error: 'This auction ID is already listed by another account.' });
-    const auction = { auctionId: auctionId.toLowerCase(), contractAddress: CONTRACT_ADDRESS.toLowerCase(), title: title.trim(), creatorWallet: creatorWallet.trim(), creatorUserId: user.id, createTransactionId: transactionId, network: 'preprod', createdAt: existing?.createdAt ?? new Date() };
+    if (existing) {
+      const samePublishedAuction = existing.contractAddress === CONTRACT_ADDRESS.toLowerCase()
+        && existing.title === title.trim()
+        && existing.creatorWallet === creatorWallet.trim()
+        && existing.createTransactionId === transactionId;
+      if (!samePublishedAuction) return respond(response, 409, { error: 'This on-chain auction ID is already published with different listing details.' });
+      return respond(response, 200, { auction: { auctionId: existing.auctionId, contractAddress: existing.contractAddress, title: existing.title, creatorWallet: existing.creatorWallet, createdAt: existing.createdAt, network: existing.network } });
+    }
+    const auction = { auctionId: auctionId.toLowerCase(), contractAddress: CONTRACT_ADDRESS.toLowerCase(), title: title.trim(), creatorWallet: creatorWallet.trim(), creatorUserId: user.id, createTransactionId: transactionId, network: 'preprod', createdAt: new Date() };
     await collection.replaceOne({ auctionId: auction.auctionId }, auction, { upsert: true });
     return respond(response, 201, { auction: { auctionId: auction.auctionId, contractAddress: auction.contractAddress, title: auction.title, creatorWallet: auction.creatorWallet, createdAt: auction.createdAt, network: auction.network } });
   } catch (error) {

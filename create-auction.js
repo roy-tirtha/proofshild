@@ -53,6 +53,8 @@ button.addEventListener('click', async () => {
   button.disabled = true;
   try {
     await sessionUser();
+    const client = await import('./proof-client.js');
+    await client.ensureWalletLinked(walletAddress);
     let pending = JSON.parse(localStorage.getItem(pendingKey()) || 'null');
     if (pending && !validPendingAuction(pending)) {
       pending = null;
@@ -63,7 +65,6 @@ button.addEventListener('click', async () => {
     if (!title || title.length > 100) throw new Error('Enter a title between 1 and 100 characters.');
     if (!/^[1-9]\d*$/.test(reserve) || BigInt(reserve) > 18446744073709551615n) throw new Error('Enter a positive whole-number reserve.');
 
-    const client = await import('./proof-client.js');
     let auctionIdHex = pending?.auctionId;
     let transactionId = pending?.transactionId;
     if (!pending) {
