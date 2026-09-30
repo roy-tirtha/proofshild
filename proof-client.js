@@ -31,6 +31,19 @@ export function createBidCommitment(amount, salt) {
   return pureCircuits.bid_commitment(BigInt(amount), salt);
 }
 
+export async function waitForWalletTransactions(api, onWaiting = () => {}) {
+  if (typeof api.getTxHistory !== 'function') return;
+  const deadline = Date.now() + 180_000;
+  while (Date.now() < deadline) {
+    const history = await api.getTxHistory(0, 20);
+    const pending = history.filter(({ txStatus }) => txStatus.status === 'pending' || txStatus.status === 'confirmed');
+    if (pending.length === 0) return;
+    onWaiting(pending.length);
+    await new Promise((resolve) => window.setTimeout(resolve, 3000));
+  }
+  throw new Error('A wallet transaction is still pending after three minutes. Wait for it to confirm or expire, then retry; do not submit another transaction yet.');
+}
+
 export async function getAuctionPrivateStatePassword(api) {
   const addresses = await api.getShieldedAddresses();
   const key = `proofshield:midnight-key:${addresses.shieldedAddress}`;

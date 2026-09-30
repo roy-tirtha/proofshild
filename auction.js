@@ -217,6 +217,9 @@ async function withAuction(circuit, args) {
   const client = await import('./proof-client.js');
   const session = await client.createAuctionSession(connectedWallet, privateStatePassword);
   try {
+    await client.waitForWalletTransactions(connectedWallet, (count) => {
+      setMessage(`Waiting for ${count} earlier wallet transaction${count === 1 ? '' : 's'} to confirm before continuing…`);
+    });
     const result = await client.submitAuctionCircuit(session.providers, contractAddress, circuit, args);
     await refreshState();
     return result.txHash || result.txId || result.identifiers?.[0];
