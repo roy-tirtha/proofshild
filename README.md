@@ -6,7 +6,7 @@ ProofShield is a sealed-bid auction dApp built with Midnight Compact. It uses on
 
 ## Product Idea
 
-ProofShield lets communities run sealed-bid auctions where bid values remain hidden while bidding is open, but the final winner is verifiable on-chain. Auction metadata is shared through MongoDB Atlas so participants can discover auctions, while Midnight enforces each auction lifecycle and verifies that every revealed bid matches the commitment submitted earlier.
+ProofShield lets communities run sealed-bid auctions where bid values remain hidden while bidding is open, while the final qualifying result is verifiable on-chain. Auction metadata is shared through MongoDB Atlas so participants can discover auctions, while Midnight enforces each auction lifecycle and verifies that every revealed bid matches the commitment submitted earlier.
 
 ## Architecture
 
@@ -23,7 +23,7 @@ contract-address.js is the single source of truth for the shared Preprod address
 
 ### Public state
 
-Observers can see the auction ID, phase, reserve, number of sealed commitments, number of revealed bids, and the highest qualifying revealed bid. The shared auction catalogue includes only title, creator wallet label, creation time, and public transaction references.
+Observers can see the auction ID, phase, reserve, number of sealed commitments, number of revealed bids, the highest qualifying revealed bid, and the winning commitment. The shared auction catalogue includes only title, creator wallet label, creation time, and public transaction references.
 
 ### Private witness and browser data
 
@@ -55,23 +55,15 @@ yarn server
 
 Open http://localhost:3000. For Vite hot reload, run yarn server and yarn dev in separate terminals, then use http://localhost:5173. Google OAuth needs both local origins/callbacks configured if you use both addresses.
 
-## Deploy the one shared contract
+## Deployed shared contract
 
-This deploy happens once. It needs a funded developer Preprod wallet; regular auction creators and bidders never deploy contracts.
+ProofShield uses this one Midnight Preprod multi-auction contract:
 
-1. Copy .env.preprod.example to ignored .env.preprod.
-2. Set exactly one of MIDNIGHT_PREPROD_MNEMONIC or MIDNIGHT_PREPROD_SEED. Never expose either secret in Git, Vercel, or the frontend.
-3. Fund that wallet with Preprod NIGHT and registered DUST.
-4. The shared contract is deployed to Preprod at `b0bd1feb64dadad51e987f6ba8e08adaa26945b3135b44c014c8f08a56bbae89`. For future deployments, connect a funded Lace or 1AM wallet and call `await window.proofshieldDeployAuction()` in the browser console, or use the terminal method:
+`b0bd1feb64dadad51e987f6ba8e08adaa26945b3135b44c014c8f08a56bbae89`
 
-~~~bash
-yarn deploy
-~~~
+Regular users never deploy contracts. They create, bid on, reveal, and finalize auction IDs through the shared contract. The address is configured in `contract-address.js`, the single source of truth for the frontend and API.
 
-5. The current address is configured in `contract-address.js`, which is the single source of truth for frontend and API actions.
-6. Deploy the repository to Vercel and verify the address is visible on the auction pages.
-
-The old per-auction deployment addresses are not compatible with this multi-auction contract. Deploy this version once and use only its emitted address.
+Maintainers only: a replacement deployment requires a funded Preprod wallet, an ignored `.env.preprod` with exactly one of `MIDNIGHT_PREPROD_MNEMONIC` or `MIDNIGHT_PREPROD_SEED`, and `yarn deploy`. Update `contract-address.js` only after verifying the replacement deployment.
 
 ## Vercel, Atlas, and OAuth
 
@@ -101,6 +93,11 @@ yarn build     # Vercel production build
 
 GitHub Actions runs compile, tests, and build on pushes and pull requests. The repository already exceeds the minimum 10 meaningful commits.
 
+## Live demo and walkthrough
+
+- Live dApp: [proofshild.vercel.app](https://proofshild.vercel.app/)
+- Demo video: [ProofShield sealed-bid auction walkthrough](https://youtu.be/QQnQySut1N4)
+
 ### Evidence screenshots
 
 **Compact compile output** — the five generated contract circuits:
@@ -119,4 +116,4 @@ GitHub Actions runs compile, tests, and build on pushes and pull requests. The r
 
 ![ProofShield CI/CD workflow](public/ci_cd.png)
 
-Still required from the organizer after the one-time deployment: commit the hardcoded contract address, push it, verify a green CI run, submit the product proposal for approval, and add screenshots plus the one-minute demo video.
+For submission, retain the original image files in `public/` and the published demo link above. Product-idea approval is an external organizer process and must be submitted separately if it has not already been approved.
