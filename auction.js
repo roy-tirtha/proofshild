@@ -3,6 +3,7 @@ let connectedAddress;
 let auctionState;
 let transactionPending = false;
 let privateRecords;
+let privateStatePassword;
 
 const defaultContractAddress = '7dce7dd497e7cfdd82a2176f04678106c13db9e9d05315590f58af383daf4eca';
 let contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS?.trim() || localStorage.getItem('proofshield:auction-contract-address') || defaultContractAddress;
@@ -21,21 +22,6 @@ function hexToBytes(hex) {
   return Uint8Array.from(hex.match(/.{2}/g) ?? [], (byte) => Number.parseInt(byte, 16));
 }
 
-function privateStatePasswordKey() {
-  if (!connectedAddress) throw new Error('Connect your wallet before starting an auction action.');
-  return `proofshield:auction-device-key:${contractAddress}:${connectedAddress.toLowerCase()}`;
-}
-
-function getDevicePrivateStatePassword() {
-  const key = privateStatePasswordKey();
-  let password = localStorage.getItem(key);
-  if (!password) {
-    password = `A${bytesToHex(randomSecret())}a!9`;
-    localStorage.setItem(key, password);
-  }
-  return password;
-}
-
 function emptyPrivateRecords() {
   return { version: 1, ownerSecret: null, bids: [] };
 }
@@ -51,7 +37,8 @@ async function deriveEncryptionKey(password, salt) {
 }
 
 async function loadPrivateRecords() {
-  const password = getDevicePrivateStatePassword();
+  const password = privateStatePassword;
+  if (!password) throw new Error('Connect your wallet before accessing private auction data.');
   const encrypted = localStorage.getItem(privateRecordKey());
   if (!encrypted) return emptyPrivateRecords();
   try {
@@ -67,7 +54,8 @@ async function loadPrivateRecords() {
 }
 
 async function savePrivateRecords(records) {
-  const password = getDevicePrivateStatePassword();
+  const password = privateStatePassword;
+  if (!password) throw new Error('Connect your wallet before saving private auction data.');
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await deriveEncryptionKey(password, salt);
@@ -148,7 +136,6 @@ async function refreshState() {
 
 async function withAuction(circuit, args) {
   if (!connectedWallet) throw new Error('Connect a Lace or 1AM wallet first.');
-  const privateStatePassword = getDevicePrivateStatePassword();
   const client = await import('./proof-client.js');
   const session = await client.createAuctionSession(connectedWallet, privateStatePassword);
   try {
@@ -201,6 +188,8 @@ window.addEventListener('proofshield:wallet-connected', async (event) => {
   connectedAddress = event.detail.address;
   byId('wallet-address').textContent = `${connectedAddress.slice(0, 12)}…${connectedAddress.slice(-8)}`;
   privateRecords = undefined;
+  const client = await import('./proof-client.js');
+  privateStatePassword = await client.getAuctionPrivateStatePassword(connectedWallet);
   await refreshState();
   await unlockRecords();
   updateControls();
@@ -209,6 +198,7 @@ window.addEventListener('proofshield:wallet-connected', async (event) => {
 window.addEventListener('proofshield:wallet-disconnected', () => {
   connectedWallet = undefined;
   connectedAddress = undefined;
+  privateStatePassword = undefined;
   privateRecords = undefined;
   byId('wallet-address').textContent = 'Not connected';
   renderPrivateBids();
