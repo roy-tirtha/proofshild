@@ -5,7 +5,7 @@ import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-pri
 import { CostModel, Transaction } from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import { CompiledContract } from '@midnight-ntwrk/midnight-js-protocol/compact-js';
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
-import { submitCallTx } from '@midnight-ntwrk/midnight-js-contracts';
+import { deployContract, submitCallTx } from '@midnight-ntwrk/midnight-js-contracts';
 import { Contract, ledger, pureCircuits } from './contract/managed/proofshield/contract/index.js';
 import { requireContractAddress } from './contract-address.js';
 
@@ -195,6 +195,20 @@ export async function submitAuctionCircuit(providers, contractAddress, circuitId
     await delay(8_000);
     onWaiting('Retrying the approved auction action in this wallet window…');
     return submit();
+  }
+}
+
+export async function deploySharedContractFromConnectedWallet(api) {
+  const storagePassword = await getAuctionPrivateStatePassword(api);
+  const session = await createAuctionSession(api, storagePassword);
+  try {
+    await waitForWalletTransactions(api);
+    const deployed = await deployContract(session.providers, { compiledContract });
+    const contractAddress = deployed.deployTxData.public.contractAddress;
+    if (!/^[0-9a-f]{64}$/i.test(contractAddress || '')) throw new Error('Midnight returned an invalid shared contract address.');
+    return contractAddress.toLowerCase();
+  } finally {
+    await session.dispose().catch(() => {});
   }
 }
 

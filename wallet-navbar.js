@@ -16,7 +16,11 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   window.proofshieldDeployAuction = async () => {
-    throw new Error('Open the Auctions page to deploy. It collects the reserve and creates the encrypted creator authorization needed to close and finalize the auction.');
+    if (!connectedApi) throw new Error('Connect a Lace or 1AM wallet on Preprod before deploying the shared contract.');
+    const { deploySharedContractFromConnectedWallet } = await import('./proof-client.js');
+    const address = await deploySharedContractFromConnectedWallet(connectedApi);
+    console.info('ProofShield shared contract deployed:', address);
+    return address;
   };
 
   const updateButtons = (message) => {
