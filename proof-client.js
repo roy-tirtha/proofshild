@@ -7,7 +7,7 @@ import { CompiledContract } from '@midnight-ntwrk/midnight-js-protocol/compact-j
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import { deployContract, submitCallTx } from '@midnight-ntwrk/midnight-js-contracts';
 import { Contract, ledger, pureCircuits } from './contract/managed/proofshield/contract/index.js';
-import { requireContractAddress } from './contract-address.js';
+import { CONTRACT_ADDRESS, requireContractAddress } from './contract-address.js';
 
 const networkId = 'preprod';
 const artifactBase = `${window.location.origin}/contract/managed/proofshield`;
@@ -199,6 +199,9 @@ export async function submitAuctionCircuit(providers, contractAddress, circuitId
 }
 
 export async function deploySharedContractFromConnectedWallet(api) {
+  if (/^[0-9a-f]{64}$/i.test(CONTRACT_ADDRESS)) {
+    throw new Error('The shared contract address is already configured. This app deploys the shared contract once.');
+  }
   const storagePassword = await getAuctionPrivateStatePassword(api);
   const session = await createAuctionSession(api, storagePassword);
   try {

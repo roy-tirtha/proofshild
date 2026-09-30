@@ -62,7 +62,7 @@ This deploy happens once. It needs a funded developer Preprod wallet; regular au
 1. Copy .env.preprod.example to ignored .env.preprod.
 2. Set exactly one of MIDNIGHT_PREPROD_MNEMONIC or MIDNIGHT_PREPROD_SEED. Never expose either secret in Git, Vercel, or the frontend.
 3. Fund that wallet with Preprod NIGHT and registered DUST.
-4. Run:
+4. For a wallet-based deployment, run the app, connect the funded Lace or 1AM wallet, and call `await window.proofshieldDeployAuction()` in the browser console. It deploys the singleton once and prints the address. For a terminal deployment, run:
 
 ~~~bash
 yarn deploy

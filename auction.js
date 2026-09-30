@@ -123,19 +123,26 @@ async function loadForWallet() {
   const client = await import('./proof-client.js');
   privateStatePassword = await client.getAuctionPrivateStatePassword(walletApi);
   privateRecords = await loadPrivateRecords();
-  const ownerKey = 'proofshield:auction-owner:' + auctionId + ':' + walletAddress.toLowerCase();
-  const ownerSecret = localStorage.getItem(ownerKey);
-  if (ownerSecret && !privateRecords.ownerSecret) {
-    privateRecords.ownerSecret = ownerSecret;
-    await savePrivateRecords(privateRecords);
-    localStorage.removeItem(ownerKey);
-  }
   renderPrivateBids(); updateControls();
+}
+
+async function loadAuctionTitle() {
+  if (!validId(auctionId)) return;
+  const response = await fetch('/api/auctions', { credentials: 'include' });
+  const type = response.headers.get('content-type') || '';
+  if (!type.includes('application/json')) return;
+  const payload = await response.json();
+  const metadata = payload.auctions?.find((item) => item.auctionId === auctionId);
+  if (!metadata) return;
+  const heading = byId('auction-title');
+  if (heading) heading.textContent = metadata.title;
+  document.title = metadata.title + (resultsView ? ' — Results — ProofShield' : ' — ProofShield');
 }
 async function showAuctionChooser() {
   const response = await fetch('/api/auctions', { credentials: 'include' });
   const payload = await response.json();
   const target = document.querySelector('.auction-content, .results-wrap');
+  document.querySelectorAll(resultsView ? '.result-address, .result-metrics, .result-card' : '.auction-address, .auction-metrics, .auction-grid').forEach((element) => { element.hidden = true; });
   const chooser = document.createElement('section');
   chooser.className = 'auction-panel result-card';
   chooser.innerHTML = '<h2>Select an auction</h2><p>Choose an auction from the shared Midnight contract.</p>';
@@ -186,6 +193,7 @@ if (!validId(auctionId)) {
   byId('auction-chain-status').textContent = 'Select an auction to continue.';
   showAuctionChooser().catch((error) => setMessage(error.message));
 } else {
+  loadAuctionTitle().catch(() => {});
   refreshAuction(); window.setInterval(refreshAuction, 15000);
 }
 renderPrivateBids(); updateControls();
