@@ -18,6 +18,9 @@ const configuredAuthURL = process.env.BETTER_AUTH_URL;
 const productionAuthURL = configuredAuthURL?.startsWith('https://')
   ? configuredAuthURL
   : `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL || 'proofshild.vercel.app'}`;
+const authBaseURL = process.env.NODE_ENV === 'production'
+  ? productionAuthURL
+  : 'http://localhost:3000';
 const authSecret = process.env.BETTER_AUTH_SECRET;
 if (process.env.NODE_ENV === 'production' && (!authSecret || authSecret.length < 32)) {
   throw new Error('Set BETTER_AUTH_SECRET to a random value of at least 32 characters in production.');
@@ -26,6 +29,7 @@ if (process.env.NODE_ENV === 'production' && (!authSecret || authSecret.length <
 console.log(`[Better Auth] Initializing authentication system...`);
 console.log(`[Better Auth] Database Adapter: MongoDB Atlas`);
 console.log(`[Better Auth] Google OAuth: ${hasGoogleConfig ? 'Configured' : 'Pending Credentials'}`);
+console.log(`[Better Auth] Base URL: ${authBaseURL}`);
 console.log(`[Better Auth] Email/Password Registration: Enabled`);
 
 const trustedOrigins = [
@@ -39,9 +43,7 @@ const trustedOrigins = [
 
 export const auth = betterAuth({
   database: mongodbAdapter(db, { client }),
-  baseURL: process.env.NODE_ENV === 'production'
-    ? productionAuthURL
-    : configuredAuthURL || 'http://localhost:5173',
+  baseURL: authBaseURL,
   secret: authSecret || 'proofshield-local-development-secret-only-32-chars',
   trustedOrigins,
   emailAndPassword: {

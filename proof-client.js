@@ -106,12 +106,15 @@ export async function submitAuctionCircuit(providers, contractAddress, circuitId
   return result.public;
 }
 
-export async function deployAuctionFromConnectedWallet(api, storagePassword) {
-  const session = await createAuctionSession(api, storagePassword);
+export async function deployAuctionFromConnectedWallet(api) {
+  const passwordEntropy = Array.from(crypto.getRandomValues(new Uint8Array(32)), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  const temporaryPassword = `A${passwordEntropy}a!9`;
+  const deploymentPrivateStateId = `ProofShieldAuctionDeployment-${crypto.randomUUID()}`;
+  const session = await createAuctionSession(api, temporaryPassword);
   try {
     const deployed = await deployContract(session.providers, {
       compiledContract,
-      privateStateId,
+      privateStateId: deploymentPrivateStateId,
       initialPrivateState: {},
     });
     return deployed.deployTxData.public.contractAddress;

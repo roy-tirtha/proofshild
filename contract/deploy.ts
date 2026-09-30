@@ -21,12 +21,15 @@ const prefix = `MIDNIGHT_${network.toUpperCase()}`;
 const mnemonic = process.env[`${prefix}_MNEMONIC`]?.trim().replace(/\s+/g, ' ');
 const seed = process.env[`${prefix}_SEED`]?.trim();
 if (Boolean(mnemonic) === Boolean(seed)) {
+  const configured = [
+    [`${prefix}_MNEMONIC`, Boolean(mnemonic)],
+    [`${prefix}_SEED`, Boolean(seed)],
+  ].filter(([, present]) => present).map(([name]) => name);
   throw new Error(
-    `Preprod deployment wallet is missing or ambiguous.\n` +
-      `1. Copy .env.${network}.example to .env.${network}.\n` +
-      `2. Set exactly one of ${prefix}_MNEMONIC or ${prefix}_SEED in that local file.\n` +
-      `3. Fund the wallet with Preprod NIGHT and registered DUST, then run yarn deploy again.\n` +
-      `Never paste the mnemonic or seed into the frontend, chat, or GitHub.`,
+    `Preprod deployment wallet is ${configured.length ? 'ambiguous' : 'not configured'}; detected: ${configured.join(', ') || 'none'}.\n` +
+      `Set exactly one value in .env.${network}: ${prefix}_MNEMONIC="your 24-word recovery phrase" OR ${prefix}_SEED=your_hex_seed.\n` +
+      `The example file contains comments only. Fund the corresponding wallet with Preprod NIGHT and registered DUST, then rerun yarn deploy.\n` +
+      `Never paste a recovery phrase or seed into the frontend, chat, or GitHub.`,
   );
 }
 const secret: WalletSecret = mnemonic

@@ -8,31 +8,47 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="styles.css" />
   <style>
-    body { background: radial-gradient(ellipse at 50% -15%, #172137 0, #080b12 55%); }
-    .auction-page { min-height: 100vh; padding: 22px clamp(16px, 4vw, 48px) 64px; }
-    .auction-header { margin: 0 auto 42px; }
-    .auction-content { width: min(100%, 760px); margin: auto; }
-    .auction-card { border: 1px solid #283246; border-radius: 20px; background: rgba(13, 19, 31, .92); padding: clamp(22px, 4vw, 36px); }
-    .auction-card h1 { font-size: clamp(28px, 5vw, 40px); letter-spacing: -.04em; }
-    .auction-intro, .auction-note, .auction-status { color: #aab3c2; font-size: 14px; line-height: 1.65; }
-    .auction-intro { margin: 10px 0 24px; }
-    .auction-address, .auction-ledger { border: 1px solid #263043; background: #090e17; border-radius: 12px; padding: 14px; margin: 16px 0; }
-    .auction-address { display: flex; flex-wrap: wrap; gap: 8px; color: #95a1b2; }
-    .auction-address code { color: #b1c8ff; overflow-wrap: anywhere; }
-    .auction-ledger { color: #dce7f7; line-height: 1.8; }
-    .auction-forms { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
-    .auction-control { display: grid; gap: 8px; }
-    .auction-control label { color: #d4dce8; font-size: 13px; }
-    .auction-control input { width: 100%; border: 1px solid #39455b; border-radius: 10px; background: #090e17; color: #f4f7fb; padding: 12px; }
-    .auction-button { border: 0; border-radius: 999px; background: #c9fff0; color: #08131a; font-weight: 700; padding: 13px 18px; cursor: pointer; }
-    .auction-button:disabled { cursor: not-allowed; opacity: .45; }
-    .auction-action { display: grid; align-content: start; gap: 12px; border: 1px solid #263043; border-radius: 14px; padding: 16px; }
-    .auction-action h2 { font-size: 18px; }
-    .auction-note { font-size: 12px; }
-    .auction-warning { color: #ffd19b; }
-    .auction-status { min-height: 24px; margin-top: 15px; overflow-wrap: anywhere; }
+    :root { color-scheme: dark; --auction-bg: #0a1113; --auction-card: #111d20; --auction-border: #26383a; --auction-mint: #9cf1d4; --auction-muted: #91a6a5; }
+    body { background: radial-gradient(ellipse at 50% -20%, #193c36 0, #0a1113 50%); color: #f1f7f5; }
+    .auction-page { min-height: 100vh; padding: 22px clamp(16px, 4vw, 52px) 72px; }
+    .auction-header { margin: 0 auto 48px; }
+    .auction-content { width: min(100%, 1040px); margin: 0 auto; }
+    .auction-hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 28px; }
+    .auction-kicker { color: var(--auction-mint); font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+    .auction-hero h1 { margin: 9px 0; font-size: clamp(34px, 6vw, 58px); line-height: 1; letter-spacing: -.055em; }
+    .auction-intro { max-width: 640px; color: #b0bfbd; font-size: 15px; line-height: 1.7; }
+    .chain-badge { flex: 0 0 auto; display: flex; align-items: center; gap: 9px; padding: 11px 14px; border: 1px solid var(--auction-border); border-radius: 999px; color: #c8d8d5; background: #101a1c; font-size: 12px; }
+    .chain-dot { width: 8px; height: 8px; border-radius: 50%; background: #f0b85a; box-shadow: 0 0 12px #f0b85a66; }
+    .auction-address { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 13px 16px; margin: 24px 0 16px; border: 1px solid var(--auction-border); border-radius: 14px; background: #0f191b; color: var(--auction-muted); font-size: 12px; }
+    .auction-address code { color: #d0e5de; overflow-wrap: anywhere; }
+    .auction-metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .metric-card, .auction-panel { border: 1px solid var(--auction-border); border-radius: 16px; background: linear-gradient(145deg, #132123, #10191b); }
+    .metric-card { padding: 18px; }
+    .metric-label { display: block; margin-bottom: 10px; color: var(--auction-muted); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+    .metric-value { display: block; overflow: hidden; color: #f4faf7; font-size: clamp(20px, 3vw, 28px); font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+    .auction-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, .8fr); gap: 16px; align-items: start; }
+    .auction-panel { padding: clamp(20px, 3vw, 28px); }
+    .auction-panel h2 { margin: 0 0 8px; font-size: 20px; letter-spacing: -.02em; }
+    .panel-intro, .auction-note { margin: 0 0 18px; color: var(--auction-muted); font-size: 13px; line-height: 1.65; }
+    .auction-control { display: grid; gap: 8px; margin: 16px 0; }
+    .auction-control span { color: #d3dfdc; font-size: 13px; font-weight: 600; }
+    .auction-control input { width: 100%; min-height: 48px; border: 1px solid #34494a; border-radius: 10px; outline: 0; background: #0b1415; color: #f4f7fb; padding: 12px 14px; font: inherit; }
+    .auction-control input:focus { border-color: var(--auction-mint); box-shadow: 0 0 0 3px #9cf1d422; }
+    .auction-button { min-height: 46px; border: 0; border-radius: 10px; background: var(--auction-mint); color: #08201a; font: inherit; font-weight: 800; padding: 0 18px; cursor: pointer; transition: transform .15s, opacity .15s; }
+    .auction-button:not(:disabled):hover { transform: translateY(-1px); }
+    .auction-button:disabled { cursor: not-allowed; opacity: .38; }
+    .auction-action { display: grid; gap: 12px; }
+    .phase-panel[hidden], [hidden] { display: none !important; }
+    .owner-actions { display: grid; gap: 10px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--auction-border); }
+    .private-bids { display: grid; gap: 9px; }
+    .private-bid-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px; border: 1px solid #293b3d; border-radius: 10px; color: #d8e4e1; background: #0c1517; font-size: 13px; }
+    .private-bid-row code { color: var(--auction-muted); font-size: 11px; }
+    .auction-status { min-height: 24px; margin-top: 18px; overflow-wrap: anywhere; color: var(--auction-mint); font-size: 13px; line-height: 1.6; }
+    .wallet-line { display: flex; justify-content: space-between; gap: 12px; margin: 18px 0; padding: 13px 0; border-block: 1px solid var(--auction-border); color: var(--auction-muted); font-size: 12px; }
+    .wallet-line strong { color: #dce9e5; font-weight: 600; }
+    .privacy-callout { margin-top: 15px; padding: 13px; border-left: 2px solid var(--auction-mint); border-radius: 0 8px 8px 0; background: #142221; color: #b6c9c4; font-size: 12px; line-height: 1.6; }
     [hidden] { display: none !important; }
-    @media (max-width: 720px) { .auction-header { margin-bottom: 28px; } }
+    @media (max-width: 760px) { .auction-header { margin-bottom: 30px; } .auction-hero { align-items: flex-start; flex-direction: column; } .auction-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .auction-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -58,47 +74,50 @@
       <button class="mobile-wallet-connect" type="button" data-wallet-connect>Connect wallet</button>
     </nav>
     <main class="auction-content">
-      <section class="auction-card" aria-labelledby="auction-title">
-        <h1 id="auction-title">Sealed-bid auction</h1>
-        <p class="auction-intro">Bidders publish a cryptographic commitment to their bid while keeping its amount and salt private. After bidding closes, bidders reveal their receipts; revealed amounts and the current winner then become public on-chain.</p>
-        <div class="auction-address"><span>Preprod contract</span><code id="auction-contract-address">Checking configuration…</code></div>
-        <p id="auction-address-warning" class="auction-warning" role="status" hidden></p>
-        <div id="auction-ledger" class="auction-ledger" aria-live="polite">Connect a Lace or 1AM wallet on Preprod to read the live auction state.</div>
-        <label class="auction-control"><span>Encrypted private-state password (16+ characters)</span><input id="auction-password" type="password" minlength="16" autocomplete="new-password" required /></label>
-        <p class="auction-note">This password protects Midnight private state in your browser. It is never sent to ProofShield.</p>
-        <div class="auction-forms">
-          <section class="auction-action">
-            <h2>Start auction</h2>
-            <label class="auction-control"><span>Public reserve amount</span><input id="auction-reserve" type="number" min="1" step="1" value="1" /></label>
-            <button id="auction-start" class="auction-button" type="button" disabled>Start auction</button>
-          </section>
-          <section class="auction-action">
-            <h2>Commit a bid</h2>
-            <label class="auction-control"><span>Private bid amount</span><input id="auction-bid" type="number" min="0" step="1" /></label>
-            <button id="auction-commit" class="auction-button" type="button" disabled>Commit bid &amp; save receipt</button>
-            <p class="auction-note">The amount and random salt are saved only in a receipt downloaded to your device. Keep it private and backed up: you need it to reveal. The chain receives only the commitment hash in this phase.</p>
-          </section>
-          <section class="auction-action">
-            <h2>Close bidding</h2>
-            <label class="auction-control"><span>Auction creator receipt</span><input id="auction-owner-receipt-close" type="file" accept="application/json,.json" /></label>
-            <p class="auction-note">Only the creator can close the global commit phase. Once closed, new bid commitments are rejected.</p>
-            <button id="auction-close" class="auction-button" type="button" disabled>Close bidding</button>
-          </section>
-          <section class="auction-action">
-            <h2>Reveal a bid</h2>
-            <label class="auction-control"><span>Private bid receipt JSON</span><input id="auction-receipt" type="file" accept="application/json,.json" /></label>
-            <button id="auction-reveal" class="auction-button" type="button" disabled>Reveal bid</button>
-            <p class="auction-note">Revealing makes your bid amount public. Reveals can be submitted by anyone who has the private receipt.</p>
-          </section>
-          <section class="auction-action">
-            <h2>Finalize</h2>
-            <label class="auction-control"><span>Auction creator receipt</span><input id="auction-owner-receipt-finalize" type="file" accept="application/json,.json" /></label>
-            <p class="auction-note">Finalize after the desired bids have been revealed. The contract records the highest revealed bid meeting the reserve.</p>
-            <button id="auction-finalize" class="auction-button" type="button" disabled>Finalize auction</button>
-          </section>
-        </div>
-        <p id="auction-message" class="auction-status" role="status" aria-live="polite"></p>
+      <section class="auction-hero" aria-labelledby="auction-title">
+        <div><span class="auction-kicker">Midnight · Preprod</span><h1 id="auction-title">Sealed auction</h1><p class="auction-intro">Bid privately while bidding is open. After the creator closes bidding, reveal your bid and verify the result on-chain.</p></div>
+        <div class="chain-badge"><span class="chain-dot"></span><span id="auction-chain-status">Reading live chain state…</span></div>
       </section>
+      <div class="auction-address"><span>Contract</span><code id="auction-contract-address">Loading…</code></div>
+      <section class="auction-metrics" aria-label="Live auction results">
+        <div class="metric-card"><span class="metric-label">Phase</span><strong class="metric-value" id="phase-value">Loading…</strong></div>
+        <div class="metric-card"><span class="metric-label">Reserve</span><strong class="metric-value" id="reserve-value">—</strong></div>
+        <div class="metric-card"><span class="metric-label">Sealed bids</span><strong class="metric-value" id="commitment-count">—</strong></div>
+        <div class="metric-card"><span class="metric-label">Revealed bids</span><strong class="metric-value" id="revealed-count">—</strong></div>
+        <div class="metric-card"><span class="metric-label">Leading revealed bid</span><strong class="metric-value" id="leading-bid">—</strong></div>
+      </section>
+      <div class="auction-grid">
+        <section class="auction-panel" aria-labelledby="action-title">
+          <h2 id="action-title">Auction actions</h2>
+          <p class="panel-intro">Each action is submitted to the deployed Midnight contract and requires wallet approval.</p>
+          <label class="auction-control"><span>Private-state password</span><input id="auction-password" type="password" minlength="16" autocomplete="new-password" placeholder="16+ characters; use 3 character types" /></label>
+          <p class="auction-note">Required by Midnight to encrypt local private state. It is never sent to ProofShield. Use the same password and browser for this wallet’s bids.</p>
+          <div id="start-panel" class="phase-panel auction-action" hidden>
+            <label class="auction-control"><span>Minimum qualifying bid (reserve)</span><input id="reserve-input" type="number" min="1" step="1" value="1" /></label>
+            <button id="start-auction" class="auction-button" type="button" disabled>Create auction</button>
+          </div>
+          <div id="commit-panel" class="phase-panel auction-action" hidden>
+            <label class="auction-control"><span>Your private bid</span><input id="bid-input" type="number" min="0" step="1" placeholder="Enter a whole-number bid" /></label>
+            <button id="commit-bid" class="auction-button" type="button" disabled>Seal my bid</button>
+            <p class="auction-note">The chain receives a commitment hash, not the bid amount or salt. Your encrypted bid record stays in this browser.</p>
+            <div id="owner-actions" class="owner-actions" hidden><p class="auction-note">You created this auction. Closing bidding permanently ends new commitments.</p><button id="close-bidding" class="auction-button" type="button" disabled>Close bidding</button></div>
+          </div>
+          <div id="reveal-panel" class="phase-panel auction-action" hidden>
+            <p class="panel-intro">Revealing publishes each of your saved bid amounts to the chain so the result can be verified.</p>
+            <button id="reveal-bids" class="auction-button" type="button" disabled>Reveal my bids</button>
+            <div id="owner-finalize" class="owner-actions"><p class="auction-note">Only the creator can finalize the result.</p><button id="finalize-auction" class="auction-button" type="button" disabled>Finalize result</button></div>
+          </div>
+          <div id="finished-panel" class="phase-panel" hidden><p class="panel-intro">This auction is finalized. Results above are read from the Preprod ledger.</p></div>
+          <p id="auction-message" class="auction-status" role="status" aria-live="polite"></p>
+        </section>
+        <aside class="auction-panel" aria-labelledby="my-bids-title">
+          <h2 id="my-bids-title">Your bids</h2>
+          <p class="panel-intro">Private details are unlocked by your wallet and password.</p>
+          <div class="wallet-line"><span>Connected wallet</span><strong id="wallet-address">Not connected</strong></div>
+          <div id="my-bids" class="private-bids" aria-live="polite">Connect a wallet to view your private bids.</div>
+          <div class="privacy-callout">Bid and creator secrets are encrypted in this browser, not uploaded. Clearing browser storage or switching devices loses access to unrevealed bids and creator actions.</div>
+        </aside>
+      </div>
     </main>
   </div>
   <script type="module" src="main.js"></script>

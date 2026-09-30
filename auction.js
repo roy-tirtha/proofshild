@@ -2,210 +2,275 @@ let connectedWallet;
 let connectedAddress;
 let auctionState;
 let transactionPending = false;
+let privateRecords;
 
-let contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS?.trim() || localStorage.getItem('proofshield:auction-contract-address') || '';
+const defaultContractAddress = '7dce7dd497e7cfdd82a2176f04678106c13db9e9d05315590f58af383daf4eca';
+let contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS?.trim() || localStorage.getItem('proofshield:auction-contract-address') || defaultContractAddress;
 const byId = (id) => document.getElementById(id);
+const phases = ['Not started', 'Bidding open', 'Reveal open', 'Finished'];
 
 function setMessage(message) {
   byId('auction-message').textContent = message;
 }
 
-function updateControls() {
-  const configured = Boolean(contractAddress);
-  const connected = Boolean(connectedWallet);
-  const phase = Number(auctionState?.phase ?? 0);
-  byId('auction-address-warning').hidden = configured;
-  if (!configured) {
-    byId('auction-address-warning').textContent = 'The app owner has not configured a deployed Preprod auction contract. You do not need to deploy or enter an address.';
+function bytesToHex(bytes) {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function hexToBytes(hex) {
+  return Uint8Array.from(hex.match(/.{2}/g) ?? [], (byte) => Number.parseInt(byte, 16));
+}
+
+function validatePassword(password) {
+  const classes = [/[A-Z]/, /[a-z]/, /\d/, /[^A-Za-z0-9]/].filter((pattern) => pattern.test(password)).length;
+  if (password.length < 16 || classes < 3) {
+    throw new Error('Use a 16+ character private-state password with at least 3 of: uppercase, lowercase, number, symbol.');
   }
-  byId('auction-start').disabled = transactionPending || !configured || !connected || phase !== 0;
-  byId('auction-commit').disabled = transactionPending || !configured || !connected || phase !== 1;
-  byId('auction-close').disabled = transactionPending || !configured || !connected || phase !== 1;
-  byId('auction-reveal').disabled = transactionPending || !configured || !connected || phase !== 2;
-  byId('auction-finalize').disabled = transactionPending || !configured || !connected || phase !== 2;
+}
+
+function emptyPrivateRecords() {
+  return { version: 1, ownerSecret: null, bids: [] };
+}
+
+function privateRecordKey() {
+  if (!connectedAddress) throw new Error('Connect your wallet before accessing your private bids.');
+  return `proofshield:auction-private:${contractAddress}:${connectedAddress.toLowerCase()}`;
+}
+
+async function deriveEncryptionKey(password, salt) {
+  const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 310000, hash: 'SHA-256' }, material, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+
+async function loadPrivateRecords(password) {
+  validatePassword(password);
+  const encrypted = localStorage.getItem(privateRecordKey());
+  if (!encrypted) return emptyPrivateRecords();
+  try {
+    const record = JSON.parse(encrypted);
+    const key = await deriveEncryptionKey(password, hexToBytes(record.salt));
+    const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: hexToBytes(record.iv) }, key, Uint8Array.from(atob(record.data), (char) => char.charCodeAt(0)));
+    const value = JSON.parse(new TextDecoder().decode(plaintext));
+    if (value.version !== 1 || !Array.isArray(value.bids)) throw new Error('Invalid private record.');
+    return value;
+  } catch {
+    throw new Error('This password could not unlock the private bids saved for this wallet in this browser.');
+  }
+}
+
+async function savePrivateRecords(password, records) {
+  validatePassword(password);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveEncryptionKey(password, salt);
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(records)));
+  const bytes = new Uint8Array(ciphertext);
+  const data = btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join(''));
+  localStorage.setItem(privateRecordKey(), JSON.stringify({ salt: bytesToHex(salt), iv: bytesToHex(iv), data }));
+  privateRecords = records;
+  renderPrivateBids();
+}
+
+function renderPrivateBids() {
+  const list = byId('my-bids');
+  if (!privateRecords || privateRecords.bids.length === 0) {
+    list.textContent = connectedAddress ? 'Your private bids will appear here after you commit.' : 'Connect a wallet to view your private bids.';
+    return;
+  }
+  list.replaceChildren();
+  privateRecords.bids.forEach((bid, index) => {
+    const item = document.createElement('div');
+    item.className = 'private-bid-row';
+    const description = document.createElement('span');
+    const commitment = hexToBytes(bid.commitment);
+    const onChain = Boolean(auctionState?.commitments.member(commitment));
+    const revealed = onChain && Boolean(auctionState.commitments.lookup(commitment));
+    description.textContent = `Bid ${index + 1} · ${bid.amount} · ${revealed ? 'Revealed on-chain' : onChain ? 'Sealed on-chain' : 'Not confirmed'}`;
+    const shortCommitment = document.createElement('code');
+    shortCommitment.textContent = `${bid.commitment.slice(0, 10)}…${bid.commitment.slice(-8)}`;
+    item.append(description, shortCommitment);
+    list.append(item);
+  });
+}
+
+function updateControls() {
+  const phase = Number(auctionState?.phase ?? -1);
+  const ready = Boolean(connectedWallet && auctionState && !transactionPending);
+  byId('start-auction').disabled = !ready || phase !== 0;
+  byId('commit-bid').disabled = !ready || phase !== 1;
+  byId('close-bidding').disabled = !ready || phase !== 1 || !privateRecords?.ownerSecret;
+  byId('reveal-bids').disabled = !ready || phase !== 2 || !privateRecords?.bids.some((bid) => auctionState.commitments.member(hexToBytes(bid.commitment)) && !auctionState.commitments.lookup(hexToBytes(bid.commitment)));
+  byId('finalize-auction').disabled = !ready || phase !== 2 || !privateRecords?.ownerSecret;
+  byId('start-panel').hidden = phase !== 0;
+  byId('commit-panel').hidden = phase !== 1;
+  byId('reveal-panel').hidden = phase !== 2;
+  byId('finished-panel').hidden = phase !== 3;
+  byId('owner-actions').hidden = !privateRecords?.ownerSecret;
+  byId('owner-finalize').hidden = !privateRecords?.ownerSecret;
+  byId('phase-value').textContent = auctionState ? phases[phase] ?? 'Unknown' : 'Connecting to Preprod…';
 }
 
 function renderState(state) {
   auctionState = state;
-  const phases = ['Not started', 'Commit phase', 'Reveal phase', 'Finalized'];
-  const winner = state.winning_commitment.some((byte) => byte !== 0)
-    ? ` · Leading bid: ${state.highest_bid.toString()}`
-    : ' · No revealed bid currently meets the reserve';
-  byId('auction-ledger').textContent = `Status: ${phases[Number(state.phase)] ?? 'Unknown'} · Reserve: ${state.reserve_price.toString()} · Commitments: ${state.commitments.size().toString()} · Revealed: ${state.reveal_count.toString()}${winner}`;
+  const phase = Number(state.phase);
+  byId('phase-value').textContent = phases[phase] ?? 'Unknown';
+  byId('reserve-value').textContent = state.reserve_price.toString();
+  byId('commitment-count').textContent = state.commitments.size().toString();
+  byId('revealed-count').textContent = state.reveal_count.toString();
+  byId('leading-bid').textContent = state.winning_commitment.some((byte) => byte !== 0) ? state.highest_bid.toString() : '—';
+  byId('auction-chain-status').textContent = 'Connected to Midnight Preprod';
+  renderPrivateBids();
   updateControls();
 }
 
 async function refreshState() {
-  if (!contractAddress) {
-    updateControls();
-    return;
-  }
   try {
     const { readPreprodAuctionState } = await import('./proof-client.js');
     renderState(await readPreprodAuctionState(contractAddress));
   } catch (error) {
-    byId('auction-ledger').textContent = error.message || 'Could not read the live auction state.';
+    auctionState = undefined;
+    byId('auction-chain-status').textContent = 'Live Preprod state unavailable';
+    byId('phase-value').textContent = 'Unavailable';
+    setMessage(error.message || 'Could not read auction state from Preprod.');
+    updateControls();
   }
 }
 
-async function withAuction(action) {
-  if (!connectedWallet) throw new Error('Connect a Lace or 1AM wallet on Preprod first.');
-  const importClient = await import('./proof-client.js');
-  const password = action.password;
-  const session = await importClient.createAuctionSession(connectedWallet, password);
+async function withAuction(circuit, args, password) {
+  if (!connectedWallet) throw new Error('Connect a Lace or 1AM wallet first.');
+  validatePassword(password);
+  const client = await import('./proof-client.js');
+  const session = await client.createAuctionSession(connectedWallet, password);
   try {
-    const tx = await importClient.submitAuctionCircuit(session.providers, contractAddress, action.circuit, action.args ?? []);
-    const txHash = tx.txHash || tx.txId || tx.identifiers?.[0];
+    const result = await client.submitAuctionCircuit(session.providers, contractAddress, circuit, args);
     await refreshState();
-    return txHash;
+    return result.txHash || result.txId || result.identifiers?.[0];
   } finally {
     await session.dispose().catch(() => {});
   }
 }
 
-function randomSalt() {
+function randomSecret() {
   return crypto.getRandomValues(new Uint8Array(32));
 }
 
-function downloadReceipt(receipt) {
-  const blob = new Blob([`${JSON.stringify(receipt, null, 2)}\n`], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  const receiptType = receipt.format === 'proofshield-auction-owner-v1' ? 'owner' : 'bid';
-  link.download = `sealed-auction-${receiptType}-${(receipt.commitment ?? receipt.contractAddress).slice(0, 12)}.json`;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
-async function runButton(buttonId, status, action) {
+async function runAction(buttonId, message, action) {
   const button = byId(buttonId);
   transactionPending = true;
   updateControls();
-  button.disabled = true;
-  setMessage(status);
+  setMessage(message);
   try {
-    const txHash = await action();
-    setMessage(txHash ? `${status.replace(/…$/, '')} Transaction: ${txHash}` : 'Transaction confirmed.');
+    const txId = await action();
+    setMessage(txId ? `Transaction submitted: ${txId}` : 'Transaction confirmed on Midnight Preprod.');
+    return true;
   } catch (error) {
-    setMessage(error.message || 'The auction transaction failed.');
+    setMessage(error instanceof Error ? error.message : 'Transaction failed.');
+    return false;
   } finally {
     transactionPending = false;
     updateControls();
+    button.blur();
   }
 }
+
+async function unlockRecords() {
+  const password = byId('auction-password').value;
+  if (!connectedAddress || !password) return;
+  try {
+    privateRecords = await loadPrivateRecords(password);
+    renderPrivateBids();
+    updateControls();
+  } catch (error) {
+    privateRecords = undefined;
+    updateControls();
+    setMessage(error.message);
+  }
+}
+
+byId('auction-password').addEventListener('change', unlockRecords);
 
 window.addEventListener('proofshield:wallet-connected', async (event) => {
   connectedWallet = event.detail.api;
   connectedAddress = event.detail.address;
-  updateControls();
+  byId('wallet-address').textContent = `${connectedAddress.slice(0, 12)}…${connectedAddress.slice(-8)}`;
+  privateRecords = undefined;
   await refreshState();
-  if (connectedAddress) setMessage(`Wallet connected: ${connectedAddress.slice(0, 8)}…${connectedAddress.slice(-6)}`);
+  await unlockRecords();
+  updateControls();
 });
 
 window.addEventListener('proofshield:wallet-disconnected', () => {
   connectedWallet = undefined;
   connectedAddress = undefined;
+  privateRecords = undefined;
+  byId('wallet-address').textContent = 'Not connected';
+  renderPrivateBids();
   updateControls();
-  setMessage('Wallet disconnected.');
 });
 
-byId('auction-start').addEventListener('click', () => runButton('auction-start', 'Starting auction…', async () => {
-  const reserve = byId('auction-reserve').value;
-  if (!/^[1-9]\d*$/.test(reserve) || BigInt(reserve) > 18446744073709551615n) throw new Error('Enter a positive whole-number reserve that fits in Uint<64>.');
-  const { bytesToHex } = await import('./proof-client.js');
-  const ownerSecret = randomSalt();
-  const txHash = await withAuction({ circuit: 'start_auction', args: [BigInt(reserve), ownerSecret], password: byId('auction-password').value });
-  downloadReceipt({
-    format: 'proofshield-auction-owner-v1',
-    network: 'preprod',
-    contractAddress,
-    secret: bytesToHex(ownerSecret),
-    transaction: txHash ?? null,
-  });
-  return txHash;
+window.addEventListener('proofshield:auction-deployed', (event) => {
+  contractAddress = event.detail.address;
+  byId('auction-contract-address').textContent = contractAddress;
+  refreshState();
+});
+
+byId('start-auction').addEventListener('click', () => runAction('start-auction', 'Starting auction on Preprod…', async () => {
+  const reserve = byId('reserve-input').value;
+  const password = byId('auction-password').value;
+  if (!/^[1-9]\d*$/.test(reserve) || BigInt(reserve) > 18446744073709551615n) throw new Error('Enter a positive whole-number reserve.');
+  const records = await loadPrivateRecords(password);
+  if (records.ownerSecret && Number(auctionState?.phase) !== 0) throw new Error('This wallet already created this auction.');
+  const secret = records.ownerSecret ? hexToBytes(records.ownerSecret) : randomSecret();
+  if (!records.ownerSecret) {
+    records.ownerSecret = bytesToHex(secret);
+    await savePrivateRecords(password, records);
+  }
+  await withAuction('start_auction', [BigInt(reserve), secret], password);
 }));
 
-byId('auction-commit').addEventListener('click', () => runButton('auction-commit', 'Creating private commitment…', async () => {
-  const amount = byId('auction-bid').value;
-  if (!/^(0|[1-9]\d*)$/.test(amount) || BigInt(amount) > 18446744073709551615n) throw new Error('Enter a whole-number bid that fits in Uint<64>.');
+byId('commit-bid').addEventListener('click', () => runAction('commit-bid', 'Sealing your bid on Preprod…', async () => {
+  const amount = byId('bid-input').value;
+  const password = byId('auction-password').value;
+  if (!/^(0|[1-9]\d*)$/.test(amount) || BigInt(amount) > 18446744073709551615n) throw new Error('Enter a non-negative whole-number bid.');
+  const records = await loadPrivateRecords(password);
+  const salt = randomSecret();
   const { bytesToHex, createBidCommitment } = await import('./proof-client.js');
-  const salt = randomSalt();
   const commitment = createBidCommitment(amount, salt);
-  const txHash = await withAuction({ circuit: 'commit_bid', args: [commitment], password: byId('auction-password').value });
-  downloadReceipt({
-    format: 'proofshield-sealed-bid-v1',
-    network: 'preprod',
-    contractAddress,
-    bidAmount: amount,
-    salt: bytesToHex(salt),
-    commitment: bytesToHex(commitment),
-    commitmentTransaction: txHash ?? null,
-  });
-  byId('auction-bid').value = '';
-  return txHash;
+  records.bids.push({ amount, salt: bytesToHex(salt), commitment: bytesToHex(commitment) });
+  await savePrivateRecords(password, records);
+  await withAuction('commit_bid', [commitment], password);
+  byId('bid-input').value = '';
 }));
 
-async function readOwnerSecret(inputId) {
-  const file = byId(inputId).files?.[0];
-  if (!file) throw new Error('Choose the private auction creator receipt JSON first.');
-  const receipt = JSON.parse(await file.text());
-  if (receipt.format !== 'proofshield-auction-owner-v1' || receipt.network !== 'preprod' || receipt.contractAddress !== contractAddress || !/^[\da-f]{64}$/i.test(receipt.secret)) {
-    throw new Error('This is not a valid creator receipt for this auction.');
-  }
-  const { hexToBytes } = await import('./proof-client.js');
-  return hexToBytes(receipt.secret);
-}
-
-byId('auction-close').addEventListener('click', () => runButton('auction-close', 'Closing commit phase…', async () => withAuction({
-  circuit: 'close_bidding',
-  args: [await readOwnerSecret('auction-owner-receipt-close')],
-  password: byId('auction-password').value,
-})));
-
-byId('auction-reveal').addEventListener('click', () => runButton('auction-reveal', 'Verifying and revealing bid…', async () => {
-  const file = byId('auction-receipt').files?.[0];
-  if (!file) throw new Error('Choose the private bid receipt JSON first.');
-  const receipt = JSON.parse(await file.text());
-  if (receipt.format !== 'proofshield-sealed-bid-v1' || receipt.network !== 'preprod' || receipt.contractAddress !== contractAddress) {
-    throw new Error('This receipt is for a different app, network, or auction contract.');
-  }
-  if (!/^(0|[1-9]\d*)$/.test(receipt.bidAmount) || !/^[\da-f]{64}$/i.test(receipt.salt)) throw new Error('The receipt is malformed.');
-  const { hexToBytes, createBidCommitment } = await import('./proof-client.js');
-  const salt = hexToBytes(receipt.salt);
-  const commitment = createBidCommitment(receipt.bidAmount, salt);
-  if (commitment.length !== 32 || commitment.some((byte, index) => byte !== hexToBytes(receipt.commitment)[index])) {
-    throw new Error('The bid or salt in this receipt does not match its commitment.');
-  }
-  return withAuction({ circuit: 'reveal_bid', args: [BigInt(receipt.bidAmount), salt], password: byId('auction-password').value });
+byId('close-bidding').addEventListener('click', () => runAction('close-bidding', 'Closing the bidding phase on Preprod…', async () => {
+  const password = byId('auction-password').value;
+  const records = await loadPrivateRecords(password);
+  if (!records.ownerSecret) throw new Error('Creator key not found in this wallet’s encrypted browser data.');
+  await withAuction('close_bidding', [hexToBytes(records.ownerSecret)], password);
 }));
 
-byId('auction-finalize').addEventListener('click', () => runButton('auction-finalize', 'Finalizing auction…', async () => withAuction({
-  circuit: 'finalize_auction',
-  args: [await readOwnerSecret('auction-owner-receipt-finalize')],
-  password: byId('auction-password').value,
-})));
-
-window.proofshieldDeployAuction = async (storagePassword = window.prompt('Choose a private-state password (at least 16 characters).')) => {
-  const api = window.proofshieldWallet?.getConnectedWallet();
-  if (!api) throw new Error('Connect Lace or 1AM from the auction page first.');
-  if (!/^.{16,}$/.test(storagePassword ?? '')) throw new Error('Pass a private-state password of at least 16 characters.');
-  setMessage('Deploying the auction contract. Approve the deployment in your connected wallet…');
-  try {
-    const { deployAuctionFromConnectedWallet } = await import('./proof-client.js');
-    contractAddress = await deployAuctionFromConnectedWallet(api, storagePassword);
-    localStorage.setItem('proofshield:auction-contract-address', contractAddress);
-    byId('auction-contract-address').textContent = contractAddress;
-    updateControls();
-    await refreshState();
-    setMessage(`Auction contract deployed on Preprod: ${contractAddress}`);
-    return contractAddress;
-  } catch (error) {
-    setMessage(error.message || 'Contract deployment failed.');
-    throw error;
+byId('reveal-bids').addEventListener('click', () => runAction('reveal-bids', 'Revealing your committed bids on Preprod…', async () => {
+  const password = byId('auction-password').value;
+  const records = await loadPrivateRecords(password);
+  const { createBidCommitment } = await import('./proof-client.js');
+  for (const bid of records.bids) {
+    const salt = hexToBytes(bid.salt);
+    const commitment = createBidCommitment(bid.amount, salt);
+    if (bytesToHex(commitment) !== bid.commitment) throw new Error('A saved private bid failed its commitment integrity check.');
+    if (!auctionState?.commitments.member(commitment)) continue;
+    if (!auctionState.commitments.lookup(commitment)) await withAuction('reveal_bid', [BigInt(bid.amount), salt], password);
   }
-};
+}));
 
-byId('auction-contract-address').textContent = contractAddress || 'Not configured';
+byId('finalize-auction').addEventListener('click', () => runAction('finalize-auction', 'Finalizing results on Preprod…', async () => {
+  const password = byId('auction-password').value;
+  const records = await loadPrivateRecords(password);
+  if (!records.ownerSecret) throw new Error('Creator key not found in this wallet’s encrypted browser data.');
+  await withAuction('finalize_auction', [hexToBytes(records.ownerSecret)], password);
+}));
+
+byId('auction-contract-address').textContent = contractAddress;
+renderPrivateBids();
 updateControls();
 refreshState();
+window.setInterval(refreshState, 15000);

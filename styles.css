@@ -1,12 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-@font-face {
-  font-family: 'Geist Pixel Circle';
-  src: url('fonts/GeistPixel-Circle.woff2') format('woff2');
-  font-weight: 400;
-  font-display: swap;
-}
-
 :root {
   --bg: #000000;
   --text: #ffffff;

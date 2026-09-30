@@ -12,6 +12,7 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
+const builtDir = path.join(rootDir, 'dist');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,14 +46,21 @@ app.get('/api/system/status', (req, res) => {
   });
 });
 
-// Serve static assets from project root
+// Prefer Vite's bundled output so browsers never receive unresolved package imports.
+app.use(express.static(builtDir, {
+  extensions: ['html'],
+}));
+
+// Keep source files available for non-bundled static assets during development.
 app.use(express.static(rootDir, {
   extensions: ['html'],
 }));
 
 // Catch-all fallback to serve index.html for client-side navigation
 app.use((req, res) => {
-  res.sendFile(path.join(rootDir, 'index.html'));
+  res.sendFile(path.join(builtDir, 'index.html'), (error) => {
+    if (error) res.sendFile(path.join(rootDir, 'index.html'));
+  });
 });
 
 app.listen(PORT, () => {
