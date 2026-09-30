@@ -6,7 +6,11 @@ let privateRecords;
 let privateStatePassword;
 
 const defaultContractAddress = '7dce7dd497e7cfdd82a2176f04678106c13db9e9d05315590f58af383daf4eca';
-let contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS?.trim() || localStorage.getItem('proofshield:auction-contract-address') || defaultContractAddress;
+const query = new URLSearchParams(window.location.search);
+const hasSelectedContract = Boolean(query.get('contract'));
+let contractAddress = (query.get('contract') || import.meta.env.VITE_CONTRACT_ADDRESS?.trim() || localStorage.getItem('proofshield:auction-contract-address') || defaultContractAddress).toLowerCase();
+if (!/^[0-9a-f]{64}$/i.test(contractAddress)) contractAddress = defaultContractAddress;
+const view = document.body.dataset.auctionView || 'bid';
 const byId = (id) => document.getElementById(id);
 const phases = ['Not started', 'Bidding open', 'Reveal open', 'Finished'];
 
@@ -96,17 +100,21 @@ function renderPrivateBids() {
 function updateControls() {
   const phase = Number(auctionState?.phase ?? -1);
   const ready = Boolean(connectedWallet && auctionState && !transactionPending);
-  byId('start-auction').disabled = !ready || phase !== 0;
-  byId('commit-bid').disabled = !ready || phase !== 1;
-  byId('close-bidding').disabled = !ready || phase !== 1 || !privateRecords?.ownerSecret;
-  byId('reveal-bids').disabled = !ready || phase !== 2 || !privateRecords?.bids.some((bid) => auctionState.commitments.member(hexToBytes(bid.commitment)) && !auctionState.commitments.lookup(hexToBytes(bid.commitment)));
-  byId('declare-winner').disabled = !ready || phase !== 2 || !privateRecords?.ownerSecret;
-  byId('start-panel').hidden = phase !== 0;
-  byId('commit-panel').hidden = phase !== 1;
-  byId('reveal-panel').hidden = phase !== 2;
-  byId('finished-panel').hidden = phase !== 3;
-  byId('owner-actions').hidden = !privateRecords?.ownerSecret;
-  byId('owner-finalize').hidden = !privateRecords?.ownerSecret;
+  const setDisabled = (id, disabled) => { if (byId(id)) byId(id).disabled = disabled; };
+  const setHidden = (id, hidden) => { if (byId(id)) byId(id).hidden = hidden; };
+  setDisabled('start-auction', !ready || phase !== 0);
+  setDisabled('commit-bid', !ready || phase !== 1);
+  setDisabled('close-bidding', !ready || phase !== 1 || !privateRecords?.ownerSecret);
+  setDisabled('reveal-bids', !ready || phase !== 2 || !privateRecords?.bids.some((bid) => auctionState.commitments.member(hexToBytes(bid.commitment)) && !auctionState.commitments.lookup(hexToBytes(bid.commitment))));
+  setDisabled('declare-winner', !ready || phase !== 2 || !privateRecords?.ownerSecret);
+  setHidden('start-panel', phase !== 0);
+  setHidden('commit-panel', phase !== 1);
+  setHidden('reveal-panel', phase !== 2);
+  setHidden('finished-panel', phase !== 3);
+  document.querySelectorAll('[data-view="bid"]').forEach((element) => { element.hidden = view === 'results'; });
+  document.querySelectorAll('[data-view="results"]').forEach((element) => { element.hidden = view !== 'results'; });
+  if (byId('owner-actions')) byId('owner-actions').hidden = !privateRecords?.ownerSecret;
+  if (byId('owner-finalize')) byId('owner-finalize').hidden = !privateRecords?.ownerSecret;
   byId('phase-value').textContent = auctionState ? phases[phase] ?? 'Unknown' : 'Connecting to Preprod…';
 }
 
@@ -119,7 +127,7 @@ function renderState(state) {
   byId('revealed-count').textContent = state.reveal_count.toString();
   const hasWinner = state.winning_commitment.some((byte) => byte !== 0);
   byId('leading-bid').textContent = hasWinner ? state.highest_bid.toString() : '—';
-  byId('final-result').textContent = hasWinner ? `Winning bid: ${state.highest_bid.toString()}` : 'No bid met the reserve.';
+  if (byId('final-result')) byId('final-result').textContent = hasWinner ? `Winning bid: ${state.highest_bid.toString()}` : 'No bid met the reserve.';
   byId('auction-chain-status').textContent = 'Connected to Midnight Preprod';
   renderPrivateBids();
   updateControls();
@@ -135,6 +143,72 @@ async function refreshState() {
     byId('phase-value').textContent = 'Unavailable';
     setMessage(error.message || 'Could not read auction state from Preprod.');
     updateControls();
+  }
+}
+
+async function showAuctionChooser() {
+  const resultsView = view === 'results';
+  document.querySelectorAll(resultsView ? '.result-address, .result-metrics, .result-card' : '.auction-address, .auction-metrics, .auction-grid').forEach((element) => { element.hidden = true; });
+  byId('auction-title').textContent = resultsView ? 'Declare a winner' : 'Choose an auction to bid on';
+  const intro = document.querySelector(resultsView ? '.results-wrap > p' : '.auction-intro');
+  intro.textContent = resultsView
+    ? 'Select an auction to close bidding, reveal your bid, or publish its result.'
+    : 'Select a live auction to submit a sealed bid.';
+  const chooser = document.createElement('section');
+  chooser.className = resultsView ? 'result-card' : 'auction-panel';
+  chooser.style.marginTop = '24px';
+  chooser.innerHTML = '<h2>Select an auction</h2><p class="panel-intro" id="auction-picker-status">Loading registered auctions…</p><div id="auction-picker-list"></div>';
+  const pickerList = chooser.querySelector('#auction-picker-list');
+  pickerList.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px';
+  (resultsView ? byId('auction-contract-address').closest('.result-address') : byId('auction-contract-address').closest('.auction-address')).before(chooser);
+  const status = chooser.querySelector('#auction-picker-status');
+  const list = chooser.querySelector('#auction-picker-list');
+  try {
+    const response = await fetch('/api/auctions');
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || 'Auction catalogue is unavailable.');
+    if (!payload.auctions.length) {
+      status.textContent = 'No published auctions are available yet.';
+      return;
+    }
+    const { readPreprodAuctionState } = await import('./proof-client.js');
+    const cards = await Promise.all(payload.auctions.map(async (auction) => {
+      const card = document.createElement('article');
+      card.className = resultsView ? 'result-card' : 'auction-panel';
+      card.style.margin = '0';
+      const heading = document.createElement('h3');
+      heading.textContent = auction.title;
+      const address = document.createElement('code');
+      address.textContent = auction.contractAddress;
+      card.append(heading);
+      try {
+        const state = await readPreprodAuctionState(auction.contractAddress);
+        const phase = Number(state.phase);
+        const names = ['Not started', 'Bidding open', 'Reveal open', 'Finished'];
+        const summary = document.createElement('p');
+        summary.textContent = `${names[phase] || 'Unknown'} · Reserve ${state.reserve_price} · ${state.commitments.size()} sealed bids`;
+        card.append(summary);
+        const isRelevant = resultsView ? phase === 1 || phase === 2 : phase === 1;
+        if (isRelevant) {
+          const action = document.createElement('a');
+          action.className = resultsView ? 'result-link' : 'auction-button';
+          action.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;text-decoration:none';
+          action.href = `${resultsView ? 'auction-results.html' : 'auction.html'}?contract=${encodeURIComponent(auction.contractAddress)}&title=${encodeURIComponent(auction.title)}`;
+          action.textContent = resultsView ? (phase === 1 ? 'Close bidding' : 'Reveal / declare winner') : 'Select to bid';
+          card.append(action);
+        }
+      } catch (error) {
+        const problem = document.createElement('p');
+        problem.textContent = `Live Preprod state unavailable: ${error.message}`;
+        card.append(problem);
+      }
+      card.append(address);
+      return card;
+    }));
+    list.replaceChildren(...cards);
+    status.textContent = 'Live state is verified against Midnight Preprod.';
+  } catch (error) {
+    status.textContent = error instanceof Error ? error.message : 'Auction catalogue is unavailable.';
   }
 }
 
@@ -194,8 +268,8 @@ window.addEventListener('proofshield:wallet-connected', async (event) => {
   privateRecords = undefined;
   const client = await import('./proof-client.js');
   privateStatePassword = await client.getAuctionPrivateStatePassword(connectedWallet);
-  await refreshState();
-  await unlockRecords();
+  if (hasSelectedContract) await refreshState();
+  if (hasSelectedContract) await unlockRecords();
   updateControls();
 });
 
@@ -212,23 +286,10 @@ window.addEventListener('proofshield:wallet-disconnected', () => {
 window.addEventListener('proofshield:auction-deployed', (event) => {
   contractAddress = event.detail.address;
   byId('auction-contract-address').textContent = contractAddress;
-  refreshState();
+  if (hasSelectedContract) refreshState();
 });
 
-byId('start-auction').addEventListener('click', () => runAction('start-auction', 'Starting auction on Preprod…', async () => {
-  const reserve = byId('reserve-input').value;
-  if (!/^[1-9]\d*$/.test(reserve) || BigInt(reserve) > 18446744073709551615n) throw new Error('Enter a positive whole-number reserve.');
-  const records = await loadPrivateRecords();
-  if (records.ownerSecret && Number(auctionState?.phase) !== 0) throw new Error('This wallet already created this auction.');
-  const secret = records.ownerSecret ? hexToBytes(records.ownerSecret) : randomSecret();
-  if (!records.ownerSecret) {
-    records.ownerSecret = bytesToHex(secret);
-    await savePrivateRecords(records);
-  }
-  await withAuction('start_auction', [BigInt(reserve), secret]);
-}));
-
-byId('commit-bid').addEventListener('click', () => runAction('commit-bid', 'Sealing your bid on Preprod…', async () => {
+byId('commit-bid')?.addEventListener('click', () => runAction('commit-bid', 'Sealing your bid on Preprod…', async () => {
   const amount = byId('bid-input').value;
   if (!/^(0|[1-9]\d*)$/.test(amount) || BigInt(amount) > 18446744073709551615n) throw new Error('Enter a non-negative whole-number bid.');
   const records = await loadPrivateRecords();
@@ -241,13 +302,13 @@ byId('commit-bid').addEventListener('click', () => runAction('commit-bid', 'Seal
   byId('bid-input').value = '';
 }));
 
-byId('close-bidding').addEventListener('click', () => runAction('close-bidding', 'Closing the bidding phase on Preprod…', async () => {
+byId('close-bidding')?.addEventListener('click', () => runAction('close-bidding', 'Closing the bidding phase on Preprod…', async () => {
   const records = await loadPrivateRecords();
   if (!records.ownerSecret) throw new Error('Creator key not found in this wallet’s encrypted browser data.');
   await withAuction('close_bidding', [hexToBytes(records.ownerSecret)]);
 }));
 
-byId('reveal-bids').addEventListener('click', () => runAction('reveal-bids', 'Revealing your committed bids on Preprod…', async () => {
+byId('reveal-bids')?.addEventListener('click', () => runAction('reveal-bids', 'Revealing your committed bids on Preprod…', async () => {
   const records = await loadPrivateRecords();
   const { createBidCommitment } = await import('./proof-client.js');
   for (const bid of records.bids) {
@@ -259,14 +320,28 @@ byId('reveal-bids').addEventListener('click', () => runAction('reveal-bids', 'Re
   }
 }));
 
-byId('declare-winner').addEventListener('click', () => runAction('declare-winner', 'Declaring the winner and publishing results on Preprod…', async () => {
+byId('declare-winner')?.addEventListener('click', () => runAction('declare-winner', 'Declaring the winner and publishing results on Preprod…', async () => {
   const records = await loadPrivateRecords();
   if (!records.ownerSecret) throw new Error('Creator key not found in this wallet’s encrypted browser data.');
   await withAuction('finalize_auction', [hexToBytes(records.ownerSecret)]);
 }));
 
 byId('auction-contract-address').textContent = contractAddress;
+const title = query.get('title');
+if (title) byId('auction-title').textContent = title;
+const titleElement = document.querySelector('title');
+if (title && titleElement) titleElement.textContent = `${title} — ProofShield`;
+for (const link of document.querySelectorAll('a[href="auction.html"], a[href="auction-results.html"]')) {
+  const target = link.getAttribute('href');
+  const parameters = new URLSearchParams({ contract: contractAddress });
+  if (title) parameters.set('title', title);
+  link.href = `${target}?${parameters}`;
+}
 renderPrivateBids();
 updateControls();
-refreshState();
-window.setInterval(refreshState, 15000);
+if (hasSelectedContract) {
+  refreshState();
+  window.setInterval(refreshState, 15000);
+} else {
+  showAuctionChooser();
+}

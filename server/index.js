@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { toNodeHandler } from 'better-auth/node';
 import { auth, getAuthConfig } from './auth.js';
 import { handleDeleteWallet, handleWalletRecords } from './records.js';
+import { handleAuctions } from './auctions.js';
 
 dotenv.config();
 
@@ -36,6 +37,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.all('/api/wallets', handleWalletRecords);
 app.all('/api/wallets/:id', handleDeleteWallet);
+app.all('/api/auctions', handleAuctions);
 
 // System telemetry and auth status endpoint
 app.get('/api/system/status', (req, res) => {
@@ -44,6 +46,10 @@ app.get('/api/system/status', (req, res) => {
     timestamp: new Date().toISOString(),
     auth: getAuthConfig(),
   });
+});
+
+app.all('/api/*splat', (req, res) => {
+  res.status(404).json({ error: `API endpoint not found: ${req.path}` });
 });
 
 // Prefer Vite's bundled output so browsers never receive unresolved package imports.

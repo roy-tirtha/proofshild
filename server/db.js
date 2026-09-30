@@ -57,6 +57,23 @@ export async function connectToDatabase() {
 async function ensureApplicationCollections(database) {
   const schemas = [
     {
+      name: 'auctions',
+      validator: {
+        $jsonSchema: {
+          bsonType: 'object',
+          required: ['contractAddress', 'title', 'creatorWallet', 'creatorUserId', 'network', 'createdAt'],
+          properties: {
+            contractAddress: { bsonType: 'string', pattern: '^[0-9a-fA-F]{64}$' },
+            title: { bsonType: 'string', minLength: 1, maxLength: 100 },
+            creatorWallet: { bsonType: 'string', minLength: 1, maxLength: 256 },
+            creatorUserId: { bsonType: 'string', minLength: 1 },
+            network: { enum: ['preprod'] },
+            createdAt: { bsonType: 'date' },
+          },
+        },
+      },
+    },
+    {
       name: 'wallet_links',
       validator: {
         $jsonSchema: {
@@ -90,6 +107,8 @@ async function ensureApplicationCollections(database) {
     { unique: true, name: 'unique_network_wallet' },
   );
   await database.collection('wallet_links').createIndex({ userId: 1, network: 1 }, { name: 'wallets_by_user_network' });
+  await database.collection('auctions').createIndex({ contractAddress: 1 }, { unique: true, name: 'unique_auction_contract' });
+  await database.collection('auctions').createIndex({ createdAt: -1 }, { name: 'auctions_newest_first' });
 }
 
 export function getDb() {

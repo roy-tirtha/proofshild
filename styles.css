@@ -177,6 +177,10 @@ header.site-header {
   white-space: nowrap;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 .nav-link:hover {
   opacity: 0.75;
 }

@@ -4,6 +4,9 @@
   "buildCommand": "yarn build",
   "outputDirectory": "dist",
   "rewrites": [
+    { "source": "/auctions", "destination": "/create-auction.html" },
+    { "source": "/auction/create", "destination": "/create-auction.html" },
+    { "source": "/auction/results", "destination": "/auction-results.html" },
     { "source": "/profile", "destination": "/profile.html" },
     { "source": "/auth", "destination": "/auth.html" },
     { "source": "/auction", "destination": "/auction.html" },

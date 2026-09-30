@@ -55,6 +55,9 @@ export async function createAuctionSession(api, storagePassword) {
     throw new Error('The connected wallet did not provide Preprod indexer endpoints.');
   }
   setNetworkId(config.networkId);
+  if (typeof api.hintUsage === 'function') {
+    await api.hintUsage(['getProvingProvider', 'balanceUnsealedTransaction', 'submitTransaction']);
+  }
 
   const zkConfigProvider = new FetchZkConfigProvider(artifactBase, window.fetch.bind(window));
   const publicDataProvider = indexerPublicDataProvider(config.indexerUri, config.indexerWsUri, window.WebSocket);
@@ -123,16 +126,20 @@ export async function submitAuctionCircuit(providers, contractAddress, circuitId
   return result.public;
 }
 
+export async function deployAuctionWithProviders(providers) {
+  const deployed = await deployContract(providers, {
+    compiledContract,
+    privateStateId,
+    initialPrivateState: {},
+  });
+  return deployed.deployTxData.public.contractAddress;
+}
+
 export async function deployAuctionFromConnectedWallet(api) {
   const password = await getAuctionPrivateStatePassword(api);
   const session = await createAuctionSession(api, password);
   try {
-    const deployed = await deployContract(session.providers, {
-      compiledContract,
-      privateStateId,
-      initialPrivateState: {},
-    });
-    return deployed.deployTxData.public.contractAddress;
+    return await deployAuctionWithProviders(session.providers);
   } finally {
     await session.dispose().catch(() => {});
   }

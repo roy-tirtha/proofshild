@@ -6,15 +6,17 @@ ProofShield is a commit–reveal sealed-bid auction prototype built with Midnigh
 
 ## Product Idea
 
-ProofShield lets a community run a simple sealed-bid auction on Midnight. A bidder enters an amount and submits one wallet-approved transaction; the contract records a cryptographic commitment, not the amount. Once the creator closes bidding, each bidder can reveal their locally saved bid, and the contract verifies it before publishing the amount and updating the result. The page reads phase, reserve, bid counts, and the leading revealed bid from the deployed Preprod contract.
+ProofShield lets a community create and run independent sealed-bid auctions on Midnight. A creator deploys a fresh contract, starts its bidding phase, and publishes only its title, creator wallet label, and contract address to a shared MongoDB catalogue; every visitor can see the auction and verify its live state from Preprod. A bidder submits a wallet-approved commitment transaction without publishing the amount. After the creator closes bidding, bidders reveal saved amounts and the contract verifies each commitment before publishing the amount and updating the result. Auction creation, bidding, and reveal/finalization are separate flows; no bids, salts, or creator secrets enter the catalogue.
 
 ## Auction Lifecycle
 
-1. The first connected wallet sets a public reserve and starts the auction.
+1. Sign in, connect a Lace or 1AM wallet, and use **Auctions** to deploy a fresh contract, set its public reserve, and register it in the shared catalogue.
 2. A bidder enters an amount. The browser generates a 32-byte random salt and computes its commitment, then submits only the commitment to the contract.
 3. The creator closes bidding. The creator’s authorization secret is encrypted in that wallet’s local browser storage.
 4. Each bidder presses “Reveal my bids.” The circuit verifies locally saved bid/salt pairs against on-chain commitments; valid amounts become public and the ledger updates the leading bid.
 5. The creator finalizes the result. No files or manual uploads are part of the normal flow.
+
+The **Auctions** page combines auction creation with the current shared catalogue. The separate **Place bid** page lets users select an open auction, while **Declare winner** lets them select an auction to close, reveal, or finalize. Each auction has its own contract because the Compact contract maintains one auction lifecycle per deployed instance. The creator secret is generated and stored encrypted in that creator's browser; creator-only close/finalize actions cannot be recovered from the catalogue or another device.
 
 Bid amounts, salts, and creator authorization data stay in browser storage scoped to the connected wallet and contract. They are not uploaded to ProofShield or MongoDB. The app creates a random local key for Midnight’s private-state provider; there is no password prompt. The same browser and wallet are required to access unrevealed bids and creator actions; clearing browser storage or changing devices permanently loses those secrets. A committed bid without its local secret cannot be revealed.
 
@@ -43,7 +45,7 @@ No private-state password is requested from bidders. The app creates a random lo
 - Node.js 22+, Yarn 1.x, Compact CLI compatible with language version `0.23`, and Docker Desktop for local Midnight integration tests.
 - `yarn install` installs JavaScript dependencies. `yarn compile` generates five circuits, keys, and TypeScript bindings under `contract/managed/proofshield/`.
 - `yarn test` runs the generated-circuit logic suite (7 tests). `yarn build` creates the static site in `dist/`.
-- Run `yarn build` before `yarn server`; port `3000` then serves the bundled frontend and local auth/API together at `http://localhost:3000`, which is the canonical local Google OAuth origin. For hot reload, run `yarn server` and `yarn dev` in separate terminals and open `http://localhost:5173`; use `localhost`, not `127.0.0.1`, so auth cookies remain on the same hostname. The auction can be browsed publicly; wallet transactions require Lace or 1AM on Preprod.
+- Run `yarn build` before `yarn server`; port `3000` then serves the bundled frontend and local auth/API together at `http://localhost:3000`, which is the canonical local Google OAuth origin. For hot reload, run `yarn server` and `yarn dev` in separate terminals and open `http://localhost:5173`; use `localhost`, not `127.0.0.1`, so auth cookies remain on the same hostname. The auction catalogue is public, but creating/listing an auction requires sign-in; wallet transactions require Lace or 1AM on Preprod. MongoDB Atlas is required for sign-in and the shared catalogue.
 - Local network integration testing needs `docker compose up -d --wait node indexer proof-server`, then `yarn test:local`.
 
 ## Deploy a Real Preprod Contract

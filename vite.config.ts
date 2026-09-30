@@ -15,7 +15,7 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      input: ['index.html', 'auth.html', 'profile.html', 'auction.html'],
+      input: ['index.html', 'auth.html', 'profile.html', 'auction.html', 'auction-results.html', 'create-auction.html'],
     },
   },
 })
