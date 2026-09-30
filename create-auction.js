@@ -106,7 +106,14 @@ button.addEventListener('click', async () => {
           setStatus(`Waiting for ${count} earlier wallet transaction${count === 1 ? '' : 's'} to confirm before starting bidding…`);
         });
         setStatus('Starting bidding on the new contract. Approve the transaction in the same wallet window…');
-        const startResult = await client.submitAuctionCircuit(session.providers, deployedAddress, 'start_auction', [BigInt(reserve), secret]);
+        const startResult = await client.submitAuctionCircuit(
+          session.providers,
+          deployedAddress,
+          'start_auction',
+          [BigInt(reserve), secret],
+          walletApi,
+          setStatus,
+        );
         startTransactionId = client.transactionReference(startResult);
         localStorage.setItem(pendingAuctionKey(), JSON.stringify({
           contractAddress: deployedAddress,

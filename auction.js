@@ -245,7 +245,14 @@ async function withAuction(circuit, args) {
     await client.waitForWalletTransactions(connectedWallet, (count) => {
       setMessage(`Waiting for ${count} earlier wallet transaction${count === 1 ? '' : 's'} to confirm before continuing…`);
     });
-    const result = await client.submitAuctionCircuit(session.providers, contractAddress, circuit, args);
+    const result = await client.submitAuctionCircuit(
+      session.providers,
+      contractAddress,
+      circuit,
+      args,
+      connectedWallet,
+      setMessage,
+    );
     const transactionId = client.transactionReference(result);
     await client.recordAuctionActivity({
       contractAddress,

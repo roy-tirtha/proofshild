@@ -31,6 +31,8 @@ export function createBidCommitment(amount, salt) {
   return pureCircuits.bid_commitment(BigInt(amount), salt);
 }
 
+const delay = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+
 export async function waitForWalletTransactions(api, onWaiting = () => {}) {
   if (typeof api.getTxHistory !== 'function') return;
   const deadline = Date.now() + 180_000;
@@ -42,6 +44,11 @@ export async function waitForWalletTransactions(api, onWaiting = () => {}) {
     await new Promise((resolve) => window.setTimeout(resolve, 3000));
   }
   throw new Error('A wallet transaction is still pending after three minutes. Wait for it to confirm or expire, then retry; do not submit another transaction yet.');
+}
+
+function isWalletPendingError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  return /transaction is already pending|wait for it to confirm or expire/i.test(message);
 }
 
 export async function getAuctionPrivateStatePassword(api) {
@@ -125,18 +132,31 @@ export async function readPreprodAuctionState(contractAddress) {
   return ledger(state.data);
 }
 
-export async function submitAuctionCircuit(providers, contractAddress, circuitId, args = []) {
-  providers.privateStateProvider.setContractAddress(contractAddress);
-  const privateState = await providers.privateStateProvider.get(privateStateId);
-  if (privateState === null) await providers.privateStateProvider.set(privateStateId, {});
-  const result = await submitCallTx(providers, {
-    compiledContract,
-    contractAddress,
-    privateStateId,
-    circuitId,
-    args,
-  });
-  return result.public;
+export async function submitAuctionCircuit(providers, contractAddress, circuitId, args = [], walletApi, onWaiting = () => {}) {
+  const submit = async () => {
+    providers.privateStateProvider.setContractAddress(contractAddress);
+    const privateState = await providers.privateStateProvider.get(privateStateId);
+    if (privateState === null) await providers.privateStateProvider.set(privateStateId, {});
+    const result = await submitCallTx(providers, {
+      compiledContract,
+      contractAddress,
+      privateStateId,
+      circuitId,
+      args,
+    });
+    return result.public;
+  };
+
+  try {
+    return await submit();
+  } catch (error) {
+    if (!walletApi || !isWalletPendingError(error)) throw error;
+    onWaiting('The wallet is finalizing an earlier transaction. Waiting before retrying this action…');
+    await waitForWalletTransactions(walletApi, (count) => onWaiting(`Waiting for ${count} wallet transaction${count === 1 ? '' : 's'} to finalize…`));
+    await delay(8_000);
+    onWaiting('Retrying the approved auction action in this wallet window…');
+    return submit();
+  }
 }
 
 export function transactionReference(result) {
