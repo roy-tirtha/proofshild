@@ -90,8 +90,7 @@
         <section class="auction-panel" aria-labelledby="action-title">
           <h2 id="action-title">Auction actions</h2>
           <p class="panel-intro">Each action is submitted to the deployed Midnight contract and requires wallet approval.</p>
-          <label class="auction-control"><span>Private-state password</span><input id="auction-password" type="password" minlength="16" autocomplete="new-password" placeholder="16+ characters; use 3 character types" /></label>
-          <p class="auction-note">Required by Midnight to encrypt local private state. It is never sent to ProofShield. Use the same password and browser for this wallet’s bids.</p>
+          <p class="auction-note">Your wallet approves each transaction. Private bid and creator data stay in this browser and are not uploaded.</p>
           <div id="start-panel" class="phase-panel auction-action" hidden>
             <label class="auction-control"><span>Minimum qualifying bid (reserve)</span><input id="reserve-input" type="number" min="1" step="1" value="1" /></label>
             <button id="start-auction" class="auction-button" type="button" disabled>Create auction</button>
@@ -105,9 +104,9 @@
           <div id="reveal-panel" class="phase-panel auction-action" hidden>
             <p class="panel-intro">Revealing publishes each of your saved bid amounts to the chain so the result can be verified.</p>
             <button id="reveal-bids" class="auction-button" type="button" disabled>Reveal my bids</button>
-            <div id="owner-finalize" class="owner-actions"><p class="auction-note">Only the creator can finalize the result.</p><button id="finalize-auction" class="auction-button" type="button" disabled>Finalize result</button></div>
+            <div id="owner-finalize" class="owner-actions"><p class="auction-note">Only the creator can publish the final result.</p><button id="declare-winner" class="auction-button" type="button" disabled>Declare winner</button></div>
           </div>
-          <div id="finished-panel" class="phase-panel" hidden><p class="panel-intro">This auction is finalized. Results above are read from the Preprod ledger.</p></div>
+          <div id="finished-panel" class="phase-panel" hidden><p class="panel-intro">This auction is finalized. Results above are read from the Preprod ledger.</p><strong id="final-result" class="metric-value">—</strong></div>
           <p id="auction-message" class="auction-status" role="status" aria-live="polite"></p>
         </section>
         <aside class="auction-panel" aria-labelledby="my-bids-title">
@@ -115,7 +114,7 @@
           <p class="panel-intro">Private details are unlocked by your wallet and password.</p>
           <div class="wallet-line"><span>Connected wallet</span><strong id="wallet-address">Not connected</strong></div>
           <div id="my-bids" class="private-bids" aria-live="polite">Connect a wallet to view your private bids.</div>
-          <div class="privacy-callout">Bid and creator secrets are encrypted in this browser, not uploaded. Clearing browser storage or switching devices loses access to unrevealed bids and creator actions.</div>
+          <div class="privacy-callout">Bid and creator secrets are kept in this browser, not uploaded. Clearing browser storage or switching devices loses access to unrevealed bids and creator actions.</div>
         </aside>
       </div>
     </main>

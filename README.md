@@ -16,7 +16,7 @@ ProofShield lets a community run a simple sealed-bid auction on Midnight. A bidd
 4. Each bidder presses “Reveal my bids.” The circuit verifies locally saved bid/salt pairs against on-chain commitments; valid amounts become public and the ledger updates the leading bid.
 5. The creator finalizes the result. No files or manual uploads are part of the normal flow.
 
-Bid amounts, salts, and creator authorization data are encrypted with AES-GCM in the browser and scoped to the connected wallet and contract. They are not uploaded to ProofShield or MongoDB. The same browser, wallet, and private-state password are required to access unrevealed bids and creator actions; clearing browser storage or changing devices permanently loses those secrets. A committed bid without its local secret cannot be revealed.
+Bid amounts, salts, and creator authorization data stay in browser storage scoped to the connected wallet and contract. They are not uploaded to ProofShield or MongoDB. The app creates a random local key for Midnight’s private-state provider; there is no password prompt. The same browser and wallet are required to access unrevealed bids and creator actions; clearing browser storage or changing devices permanently loses those secrets. A committed bid without its local secret cannot be revealed.
 
 ## Privacy Model
 
@@ -32,11 +32,11 @@ Bid amounts, salts, and creator authorization data are encrypted with AES-GCM in
 
 ### Private circuit inputs
 
-The bid amount and random salt are inputs to the commit/reveal circuits. During the commit phase, the contract stores only `persistentHash(domain, amount, salt)`. At reveal, the amount is intentionally disclosed and recorded so all observers can verify the auction result. The creator secret authorizes closing/finalization; its hash is public, but the secret is never written to the ledger. Bid and creator data are encrypted in browser local storage with a password-derived AES-GCM key. This client-side storage is not a backup service and is not synchronized between devices.
+The bid amount and random salt are inputs to the commit/reveal circuits. During the commit phase, the contract stores only `persistentHash(domain, amount, salt)`. At reveal, the amount is intentionally disclosed and recorded so all observers can verify the auction result. The creator secret authorizes closing/finalization; its hash is public, but the secret is never written to the ledger. Private state and bid/creator records are held in browser local storage under a generated device key. This client-side storage is not a backup service and is not synchronized between devices.
 
 This design hides bid values **until they are revealed**; it does not keep bids private forever. Commitments and their on-chain timing remain public. The contract proves that a revealed bid matches a previous commitment and updates the highest qualifying amount. It does not prove a bidder's real-world identity or that a bid amount represents available funds. There is no escrow, payment, refund, anti-Sybil identity, deadline, or automatic settlement. Do not use this prototype for an asset-bearing auction without adding and auditing those features.
 
-The password in the UI is used by Midnight’s local private-state provider and to encrypt local bid/creator data. Use at least 16 characters with three character types. Never reuse a wallet recovery phrase as this password.
+No private-state password is requested from bidders. The app creates a random local key for Midnight’s local private-state provider. Back up access to the same browser profile and do not clear its site data while you have unrevealed bids or creator privileges.
 
 ## Requirements
 
