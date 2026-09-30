@@ -4,6 +4,12 @@ const button = document.getElementById('create-auction-button');
 const status = document.getElementById('create-auction-status');
 
 function setStatus(message) { status.textContent = message; }
+function debug(event, details = {}) {
+  console.info(`[ProofShield] ${event}`, details);
+  const history = window.proofshieldDebugLog ?? [];
+  history.push({ event, details, at: new Date().toISOString() });
+  window.proofshieldDebugLog = history.slice(-100);
+}
 
 async function readApiJson(response) {
   const contentType = response.headers.get('content-type') || '';
@@ -52,9 +58,10 @@ button.addEventListener('click', async () => {
   if (!walletApi || !walletAddress) return setStatus('Connect a wallet first.');
   button.disabled = true;
   try {
+    debug('create.click', { walletAddress });
+    setStatus('Checking your account and preparing the Midnight transaction…');
     await sessionUser();
     const client = await import('./proof-client.js');
-    await client.ensureWalletLinked(walletAddress);
     let pending = JSON.parse(localStorage.getItem(pendingKey()) || 'null');
     if (pending && !validPendingAuction(pending)) {
       pending = null;
@@ -68,6 +75,7 @@ button.addEventListener('click', async () => {
     let auctionIdHex = pending?.auctionId;
     let transactionId = pending?.transactionId;
     if (!pending) {
+      debug('create.new-auction.start', { title, reserve });
       const auctionId = client.createAuctionId();
       auctionIdHex = client.auctionIdToHex(auctionId);
       const ownerSecret = crypto.getRandomValues(new Uint8Array(32));
@@ -78,6 +86,7 @@ button.addEventListener('click', async () => {
         await client.waitForWalletTransactions(walletApi, (count) => setStatus(`Waiting for ${count} earlier wallet transaction${count === 1 ? '' : 's'} to finalize…`));
         const result = await client.submitAuctionCircuit(session.providers, client.sharedContractAddress(), 'create_auction', [auctionId, BigInt(reserve), ownerSecret], walletApi, setStatus);
         transactionId = client.transactionReference(result);
+        debug('create.chain-submitted', { auctionId: auctionIdHex, transactionId });
         await saveEncryptedOwnerRecord(client, auctionIdHex, storagePassword, ownerSecret);
         localStorage.setItem(pendingKey(), JSON.stringify({ auctionId: auctionIdHex, title, reserve, transactionId }));
       } finally {
@@ -91,16 +100,25 @@ button.addEventListener('click', async () => {
     if (typeof transactionId !== 'string' || transactionId.length < 1 || transactionId.length > 256) invalidListingFields.push('creation transaction reference');
     if (invalidListingFields.length) throw new Error(`The saved auction cannot be published because its ${invalidListingFields.join(', ')} ${invalidListingFields.length === 1 ? 'is' : 'are'} invalid. The auction transaction already exists; keep this browser data and retry after fixing the issue.`);
     setStatus('Publishing the on-chain auction to the shared catalogue…');
+    debug('create.catalogue.publishing', { auctionId: auctionIdHex, transactionId });
     const response = await fetch('/api/auctions', {
       method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ auctionId: auctionIdHex, title, creatorWallet: walletAddress, transactionId }),
     });
     const body = await readApiJson(response);
     if (!response.ok) throw new Error(body.error || 'The auction is on-chain, but its catalogue entry could not be saved. Retry to publish the same auction.');
-    await client.recordAuctionActivity({ contractAddress: client.sharedContractAddress(), auctionId: auctionIdHex, action: 'auction_created', transactionId, walletAddress });
+    debug('create.catalogue.published', { auctionId: auctionIdHex, transactionId });
+    try {
+      await client.recordAuctionActivity({ contractAddress: client.sharedContractAddress(), auctionId: auctionIdHex, action: 'auction_created', transactionId, walletAddress });
+    } catch (activityError) {
+      debug('create.activity.save-failed', { message: activityError instanceof Error ? activityError.message : String(activityError) });
+      console.warn('[ProofShield] Auction was created and published, but activity history could not be saved.', activityError);
+    }
     localStorage.removeItem(pendingKey());
     window.location.assign(`auction.html?auction=${encodeURIComponent(auctionIdHex)}`);
   } catch (error) {
+    debug('create.failed', { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined });
+    console.error('[ProofShield] Auction creation failed:', error);
     setStatus(error instanceof Error ? error.message : 'Auction creation failed.');
   } finally {
     button.disabled = !walletApi;

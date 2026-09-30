@@ -16,6 +16,14 @@ const privateStateDatabase = 'proofshield-sealed-auction-v1';
 const compiledContract = CompiledContract.make('ProofShieldAuction', Contract)
   .pipe(CompiledContract.withVacantWitnesses);
 
+export function debugProofShield(event, details = {}) {
+  const entry = { event, details, at: new Date().toISOString() };
+  const history = window.proofshieldDebugLog ?? [];
+  history.push(entry);
+  window.proofshieldDebugLog = history.slice(-100);
+  console.info(`[ProofShield] ${event}`, details);
+}
+
 function toHex(bytes) {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
@@ -53,11 +61,16 @@ const delay = (milliseconds) => new Promise((resolve) => window.setTimeout(resol
 
 export async function waitForWalletTransactions(api, onWaiting = () => {}) {
   if (typeof api.getTxHistory !== 'function') return;
+  debugProofShield('wallet.wait.start');
   const deadline = Date.now() + 180_000;
   while (Date.now() < deadline) {
     const history = await api.getTxHistory(0, 20);
     const pending = history.filter(({ txStatus }) => String(txStatus?.status ?? '').toLowerCase() === 'pending');
-    if (pending.length === 0) return;
+    if (pending.length === 0) {
+      debugProofShield('wallet.wait.complete');
+      return;
+    }
+    debugProofShield('wallet.wait.pending', { count: pending.length });
     onWaiting(pending.length);
     await new Promise((resolve) => window.setTimeout(resolve, 3000));
   }
@@ -86,6 +99,7 @@ export async function createAuctionSession(api, storagePassword) {
     throw new Error('Enter a private-state password of at least 16 characters.');
   }
   const [config, addresses] = await Promise.all([api.getConfiguration(), api.getShieldedAddresses()]);
+  debugProofShield('auction.session.wallet-ready', { networkId: config.networkId, hasIndexer: Boolean(config.indexerUri && config.indexerWsUri) });
   if (config.networkId !== networkId) {
     throw new Error(`Wallet is connected to ${config.networkId}, but this contract targets Preprod.`);
   }
@@ -173,6 +187,7 @@ export async function readPreprodAuction(auctionId) {
 
 export async function submitAuctionCircuit(providers, contractAddress, circuitId, args = [], walletApi, onWaiting = () => {}) {
   const submit = async () => {
+    debugProofShield('auction.circuit.preparing', { circuitId, contractAddress });
     providers.privateStateProvider.setContractAddress(contractAddress);
     const privateState = await providers.privateStateProvider.get(privateStateId);
     if (privateState === null) await providers.privateStateProvider.set(privateStateId, {});
@@ -183,12 +198,14 @@ export async function submitAuctionCircuit(providers, contractAddress, circuitId
       circuitId,
       args,
     });
+    debugProofShield('auction.circuit.submitted', { circuitId });
     return result.public;
   };
 
   try {
     return await submit();
   } catch (error) {
+    debugProofShield('auction.circuit.failed', { circuitId, message: error instanceof Error ? error.message : String(error) });
     if (!walletApi || !isWalletPendingError(error)) throw error;
     onWaiting('The wallet is finalizing an earlier transaction. Waiting before retrying this action…');
     await waitForWalletTransactions(walletApi, (count) => onWaiting(`Waiting for ${count} wallet transaction${count === 1 ? '' : 's'} to finalize…`));
@@ -246,7 +263,7 @@ export async function ensureWalletLinked(walletAddress) {
 }
 
 export async function recordAuctionActivity({ contractAddress, auctionId, action, transactionId, walletAddress }) {
-  await ensureWalletLinked(walletAddress);
+  debugProofShield('auction.activity.saving', { action, auctionId, transactionId });
   const response = await fetch('/api/auction-events', {
     method: 'POST',
     credentials: 'include',
@@ -259,6 +276,7 @@ export async function recordAuctionActivity({ contractAddress, auctionId, action
   }
   const body = await response.json();
   if (!response.ok) throw new Error(body.error || 'Auction activity could not be saved.');
+  debugProofShield('auction.activity.saved', { action, auctionId, transactionId });
   return body.event;
 }
 

@@ -102,13 +102,16 @@ async function submit(circuitId, args, activity) {
   if (!walletApi) throw new Error('Connect a Lace or 1AM wallet first.');
   await requireSignedIn();
   const client = await import('./proof-client.js');
-  await client.ensureWalletLinked(walletAddress);
   const session = await client.createAuctionSession(walletApi, privateStatePassword);
   try {
     await client.waitForWalletTransactions(walletApi, (count) => setMessage('Waiting for ' + count + ' earlier wallet transaction' + (count === 1 ? '' : 's') + ' to finalize…'));
     const result = await client.submitAuctionCircuit(session.providers, client.sharedContractAddress(), circuitId, args, walletApi, setMessage);
     const transactionId = client.transactionReference(result);
-    await client.recordAuctionActivity({ contractAddress: client.sharedContractAddress(), auctionId, action: activity, transactionId, walletAddress });
+    try {
+      await client.recordAuctionActivity({ contractAddress: client.sharedContractAddress(), auctionId, action: activity, transactionId, walletAddress });
+    } catch (activityError) {
+      console.warn('[ProofShield] Transaction succeeded, but activity history could not be saved.', activityError);
+    }
     await refreshAuction();
     return transactionId;
   } finally { await session.dispose().catch(() => {}); }
